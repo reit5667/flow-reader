@@ -1,4 +1,6 @@
 .DS_Store
+tasks.json
+progress.md
 Screens/
 *.xcuserstate
 xcuserdata/
