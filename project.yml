@@ -25,9 +25,11 @@ targets:
       - path: FlowReader/Resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.flowreader.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.vsharavin.flowreader
         PRODUCT_NAME: FlowReader
         INFOPLIST_FILE: FlowReader/Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         SWIFT_EMIT_LOC_STRINGS: YES
+        DEVELOPMENT_TEAM: Q4H92B5WW9
+        CODE_SIGN_STYLE: Automatic

@@ -37,7 +37,7 @@
 		043BCC3159CF5FF12258351B /* BrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserView.swift; sourceTree = "<group>"; };
 		18263F47D915C2BD2BF8C118 /* FileStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageService.swift; sourceTree = "<group>"; };
 		2255F5F6CDF5581602FB9096 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		2A1994709C4CA31C788F9F8C /* FlowReader.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlowReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A1994709C4CA31C788F9F8C /* FlowReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AD578CA14C43C740C234B3F /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		2D359A825C3D01220BCCA3C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		49F553081DA3C03E8AB367F8 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
@@ -216,7 +216,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					1C31BDED5C83345C3BB7F191 = {
-						DevelopmentTeam = Q4H92B5WW9;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -411,7 +410,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = Q4H92B5WW9;
+				DEVELOPMENT_TEAM = 273XW2F358;
 				INFOPLIST_FILE = FlowReader/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -433,7 +432,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = Q4H92B5WW9;
+				DEVELOPMENT_TEAM = 273XW2F358;
 				INFOPLIST_FILE = FlowReader/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
