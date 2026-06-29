@@ -4,11 +4,15 @@ import SwiftData
 
 @Observable
 final class BrowserState {
-    var addressText: String = "https://flibusta.is"
+    var addressText: String
     var canGoBack = false
     var canGoForward = false
     var isLoading = false
     weak var webView: WKWebView?
+
+    init(startURL: String = "https://flibusta.is") {
+        self.addressText = startURL
+    }
 
     func goBack() { webView?.goBack() }
     func goForward() { webView?.goForward() }
@@ -28,20 +32,37 @@ final class BrowserState {
 
 struct BrowserView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
 
     let onOpenSidebar: () -> Void
+    var coverPickMode: Bool = false
+    var onCoverPicked: ((URL) -> Void)? = nil
 
-    @State private var browserState = BrowserState()
+    @State private var browserState: BrowserState
     @State private var showToast = false
     @State private var toastMessage = ""
+    @State private var pendingCoverURL: URL? = nil
+    @State private var showCoverConfirm = false
+
+    init(onOpenSidebar: @escaping () -> Void,
+         startURL: String = "https://flibusta.is",
+         coverPickMode: Bool = false,
+         onCoverPicked: ((URL) -> Void)? = nil) {
+        self.onOpenSidebar = onOpenSidebar
+        self.coverPickMode = coverPickMode
+        self.onCoverPicked = onCoverPicked
+        self._browserState = State(wrappedValue: BrowserState(startURL: startURL))
+    }
 
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 BrowserWebViewRepresentable(
                     state: browserState,
+                    coverPickMode: coverPickMode,
                     onFileDownloaded: handleDownload,
-                    onImportError: showError
+                    onImportError: showError,
+                    onCoverImageURL: handleCoverImageURL
                 )
                 .ignoresSafeArea(edges: .bottom)
 
@@ -57,8 +78,12 @@ struct BrowserView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { onOpenSidebar() } label: {
-                        Image(systemName: "line.3.horizontal")
+                    if coverPickMode {
+                        Button("Закрыть") { dismiss() }
+                    } else {
+                        Button { onOpenSidebar() } label: {
+                            Image(systemName: "line.3.horizontal")
+                        }
                     }
                 }
                 ToolbarItem(placement: .principal) {
@@ -76,6 +101,15 @@ struct BrowserView: View {
                     .disabled(!browserState.canGoForward)
                 }
             }
+        }
+        .alert("Использовать как обложку?", isPresented: $showCoverConfirm) {
+            Button("Использовать") {
+                if let url = pendingCoverURL {
+                    onCoverPicked?(url)
+                    dismiss()
+                }
+            }
+            Button("Отмена", role: .cancel) { pendingCoverURL = nil }
         }
     }
 
@@ -111,6 +145,11 @@ struct BrowserView: View {
         toast("Ошибка: \(message)")
     }
 
+    private func handleCoverImageURL(_ url: URL) {
+        pendingCoverURL = url
+        showCoverConfirm = true
+    }
+
     private func toast(_ message: String) {
         toastMessage = message
         withAnimation { showToast = true }
@@ -124,20 +163,43 @@ struct BrowserView: View {
 
 struct BrowserWebViewRepresentable: UIViewRepresentable {
     let state: BrowserState
+    let coverPickMode: Bool
     let onFileDownloaded: (URL) -> Void
     let onImportError: (String) -> Void
+    let onCoverImageURL: (URL) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(state: state, onFileDownloaded: onFileDownloaded, onImportError: onImportError)
+        Coordinator(
+            state: state,
+            coverPickMode: coverPickMode,
+            onFileDownloaded: onFileDownloaded,
+            onImportError: onImportError,
+            onCoverImageURL: onCoverImageURL
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+
+        if coverPickMode {
+            let script = WKUserScript(
+                source: coverPickJS,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: false
+            )
+            config.userContentController.addUserScript(script)
+            config.userContentController.add(
+                WeakScriptMessageHandler(context.coordinator),
+                name: "coverImage"
+            )
+        }
+
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
         state.webView = webView
-        if let url = URL(string: "https://flibusta.is") {
+
+        if let url = URL(string: state.addressText) {
             webView.load(URLRequest(url: url))
         }
         return webView
@@ -146,53 +208,90 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.onFileDownloaded = onFileDownloaded
         context.coordinator.onImportError = onImportError
+        context.coordinator.onCoverImageURL = onCoverImageURL
+    }
+
+    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "coverImage")
+    }
+
+    // Prevents WKUserContentController retain cycle
+    private final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+        weak var coordinator: Coordinator?
+        init(_ coordinator: Coordinator) { self.coordinator = coordinator }
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            coordinator?.handleScriptMessage(message)
+        }
+    }
+
+    // Long-press on <img> → posts {src} to Swift
+    private var coverPickJS: String {
+        """
+        (function() {
+            var timer;
+            document.addEventListener('touchstart', function(e) {
+                var img = e.target.closest('img');
+                if (!img || !img.src) return;
+                timer = setTimeout(function() {
+                    window.webkit.messageHandlers.coverImage.postMessage(img.src);
+                }, 600);
+            }, {passive: true});
+            document.addEventListener('touchend', function() { clearTimeout(timer); }, {passive: true});
+            document.addEventListener('touchmove', function() { clearTimeout(timer); }, {passive: true});
+        })();
+        """
     }
 
     // MARK: Coordinator
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKDownloadDelegate {
         private let state: BrowserState
+        private let coverPickMode: Bool
         var onFileDownloaded: (URL) -> Void
         var onImportError: (String) -> Void
+        var onCoverImageURL: (URL) -> Void
         private var downloadDestination: URL?
 
-        init(state: BrowserState, onFileDownloaded: @escaping (URL) -> Void, onImportError: @escaping (String) -> Void) {
+        init(state: BrowserState, coverPickMode: Bool,
+             onFileDownloaded: @escaping (URL) -> Void,
+             onImportError: @escaping (String) -> Void,
+             onCoverImageURL: @escaping (URL) -> Void) {
             self.state = state
+            self.coverPickMode = coverPickMode
             self.onFileDownloaded = onFileDownloaded
             self.onImportError = onImportError
+            self.onCoverImageURL = onCoverImageURL
         }
 
-        // MARK: Navigation policy — intercept by URL extension
+        func handleScriptMessage(_ message: WKScriptMessage) {
+            guard let src = message.body as? String, let url = URL(string: src) else { return }
+            DispatchQueue.main.async { self.onCoverImageURL(url) }
+        }
+
+        // MARK: Navigation policy
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                      preferences: WKWebpagePreferences,
                      decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
-            if let url = navigationAction.request.url, isBookURL(url) {
+            if !coverPickMode, let url = navigationAction.request.url, isBookURL(url) {
                 decisionHandler(.download, preferences)
             } else {
                 decisionHandler(.allow, preferences)
             }
         }
 
-        // Intercept by MIME type when URL extension is absent
-
         func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
                      decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-            let mimeType = navigationResponse.response.mimeType ?? ""
-            if isBookMIMEType(mimeType) {
+            if !coverPickMode, isBookMIMEType(navigationResponse.response.mimeType ?? "") {
                 decisionHandler(.download)
             } else {
                 decisionHandler(.allow)
             }
         }
 
-        // Hook WKDownload from action interception
-
         func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
             download.delegate = self
         }
-
-        // Hook WKDownload from response interception
 
         func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
             download.delegate = self
@@ -204,11 +303,8 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
                       suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
             var filename = suggestedFilename
             let mimeType = response.mimeType ?? ""
-            if mimeType.contains("epub") && !filename.hasSuffix(".epub") {
-                filename += ".epub"
-            } else if (mimeType.contains("fictionbook") || mimeType.contains("fb2")) && !filename.hasSuffix(".fb2") {
-                filename += ".fb2"
-            }
+            if mimeType.contains("epub") && !filename.hasSuffix(".epub") { filename += ".epub" }
+            else if (mimeType.contains("fictionbook") || mimeType.contains("fb2")) && !filename.hasSuffix(".fb2") { filename += ".fb2" }
             let dest = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString + "_" + filename)
             downloadDestination = dest
@@ -241,9 +337,7 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
                 self.state.isLoading = false
                 self.state.canGoBack = webView.canGoBack
                 self.state.canGoForward = webView.canGoForward
-                if let url = webView.url {
-                    self.state.addressText = url.absoluteString
-                }
+                if let url = webView.url { self.state.addressText = url.absoluteString }
             }
         }
 
