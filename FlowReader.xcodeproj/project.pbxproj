@@ -7,29 +7,53 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B15EEE5FDFE4E975F267CEE /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F553081DA3C03E8AB367F8 /* ReaderView.swift */; };
 		0D6366CB011837B05B93D41B /* Book.swift in Sources */ = {isa = PBXBuildFile; fileRef = 860A778C99556D93BC027FD7 /* Book.swift */; };
 		10910B11A7FD46E2A4EC250D /* FlowReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A097C54A6236E39855299FDF /* FlowReaderApp.swift */; };
+		12EF0B324F6B7913C5076991 /* BrightnessGestureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1880260E48A28C2DFD67DFD /* BrightnessGestureView.swift */; };
 		18CDCFBB98BE8F4B2CE11754 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E513449E9FFE39DE0B2A69 /* ContentView.swift */; };
+		49409DB941FA868B37890DED /* TOCView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 819BFABE77A83A9FAA2B5D27 /* TOCView.swift */; };
+		5745B152C67538C30E2A31B4 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63E3CCC5625AB7C328A5067 /* SidebarView.swift */; };
+		6FB7F4927A4BB96F88D2B4CB /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8214A3A17EC5E1F7A9CDB6EE /* BookmarksView.swift */; };
 		74280B6A9122E9B57947375F /* ReaderSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A75BA336FDE2BE2D93D2EAA5 /* ReaderSettings.swift */; };
 		834BDAF31D4A681E2ADC12C4 /* FileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18263F47D915C2BD2BF8C118 /* FileStorageService.swift */; };
+		8723263786A24F09DA267DC6 /* ReaderControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF80624876559FD3B5CDBF89 /* ReaderControlsView.swift */; };
+		A9A0E633CEB13BD9CEB68BEE /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C48CB5E7755DBBB209C985 /* EPUBParser.swift */; };
+		B18ED34D2E4D4DD304482B3A /* BrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 043BCC3159CF5FF12258351B /* BrowserView.swift */; };
 		B3B99AE1D40E76326659ECE0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2D359A825C3D01220BCCA3C2 /* Assets.xcassets */; };
+		B483519039F0227B78327373 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AD578CA14C43C740C234B3F /* LibraryView.swift */; };
+		B860B2558D5FD47E9AE80919 /* ReaderSettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF90BCFA7895322D93302329 /* ReaderSettingsPanel.swift */; };
 		BDDFCFB65A36A788649AAC52 /* Bookmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = A287DB973340BE918C505A5D /* Bookmark.swift */; };
+		BF4E76D7AC6F13EFEA966D2A /* SelectionToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5BF5EA5D50699F1032C479B /* SelectionToolbar.swift */; };
 		D10E6FD482994AA87B9877BB /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF020326510F89C672F7790A /* AppState.swift */; };
+		D15C0308CF78DA8D96D123B4 /* FB2Parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57B0B9519041E91A503196D6 /* FB2Parser.swift */; };
 		F9176E6814047DFEDB1F0DED /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B25EC7B4072043AA294D0FFE /* ImportService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		00E513449E9FFE39DE0B2A69 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		03B708865D37C318576E6C48 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		043BCC3159CF5FF12258351B /* BrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserView.swift; sourceTree = "<group>"; };
 		18263F47D915C2BD2BF8C118 /* FileStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageService.swift; sourceTree = "<group>"; };
 		2A1994709C4CA31C788F9F8C /* FlowReader.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlowReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2AD578CA14C43C740C234B3F /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		2D359A825C3D01220BCCA3C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		49F553081DA3C03E8AB367F8 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
+		57B0B9519041E91A503196D6 /* FB2Parser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FB2Parser.swift; sourceTree = "<group>"; };
+		819BFABE77A83A9FAA2B5D27 /* TOCView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOCView.swift; sourceTree = "<group>"; };
+		8214A3A17EC5E1F7A9CDB6EE /* BookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksView.swift; sourceTree = "<group>"; };
 		860A778C99556D93BC027FD7 /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
 		A097C54A6236E39855299FDF /* FlowReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowReaderApp.swift; sourceTree = "<group>"; };
+		A1880260E48A28C2DFD67DFD /* BrightnessGestureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrightnessGestureView.swift; sourceTree = "<group>"; };
 		A287DB973340BE918C505A5D /* Bookmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bookmark.swift; sourceTree = "<group>"; };
 		A75BA336FDE2BE2D93D2EAA5 /* ReaderSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettings.swift; sourceTree = "<group>"; };
 		B25EC7B4072043AA294D0FFE /* ImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportService.swift; sourceTree = "<group>"; };
+		C3C48CB5E7755DBBB209C985 /* EPUBParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUBParser.swift; sourceTree = "<group>"; };
 		CF020326510F89C672F7790A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		E5BF5EA5D50699F1032C479B /* SelectionToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionToolbar.swift; sourceTree = "<group>"; };
+		E63E3CCC5625AB7C328A5067 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		EF90BCFA7895322D93302329 /* ReaderSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsPanel.swift; sourceTree = "<group>"; };
+		FF80624876559FD3B5CDBF89 /* ReaderControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderControlsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -41,6 +65,14 @@
 				A097C54A6236E39855299FDF /* FlowReaderApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		8878F2DC45B3D6C680FC04B0 /* Browser */ = {
+			isa = PBXGroup;
+			children = (
+				043BCC3159CF5FF12258351B /* BrowserView.swift */,
+			);
+			path = Browser;
 			sourceTree = "<group>";
 		};
 		8A432183BFB0227656F96E90 /* Resources */ = {
@@ -55,6 +87,8 @@
 		8DEBE35767C8A54FED4FB907 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				C3C48CB5E7755DBBB209C985 /* EPUBParser.swift */,
+				57B0B9519041E91A503196D6 /* FB2Parser.swift */,
 				18263F47D915C2BD2BF8C118 /* FileStorageService.swift */,
 				B25EC7B4072043AA294D0FFE /* ImportService.swift */,
 			);
@@ -64,6 +98,9 @@
 		A8BEAAD088516D215142E7C0 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				8878F2DC45B3D6C680FC04B0 /* Browser */,
+				E1B9D39CD513DF8D4FFEEBA4 /* Library */,
+				DB9AE0B2373396E29FBBD612 /* Reader */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -102,6 +139,29 @@
 				F5334ACBEE3B35BA29EAC9CA /* Models */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		DB9AE0B2373396E29FBBD612 /* Reader */ = {
+			isa = PBXGroup;
+			children = (
+				8214A3A17EC5E1F7A9CDB6EE /* BookmarksView.swift */,
+				A1880260E48A28C2DFD67DFD /* BrightnessGestureView.swift */,
+				FF80624876559FD3B5CDBF89 /* ReaderControlsView.swift */,
+				EF90BCFA7895322D93302329 /* ReaderSettingsPanel.swift */,
+				49F553081DA3C03E8AB367F8 /* ReaderView.swift */,
+				E5BF5EA5D50699F1032C479B /* SelectionToolbar.swift */,
+				819BFABE77A83A9FAA2B5D27 /* TOCView.swift */,
+			);
+			path = Reader;
+			sourceTree = "<group>";
+		};
+		E1B9D39CD513DF8D4FFEEBA4 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				2AD578CA14C43C740C234B3F /* LibraryView.swift */,
+				E63E3CCC5625AB7C328A5067 /* SidebarView.swift */,
+			);
+			path = Library;
 			sourceTree = "<group>";
 		};
 		F5334ACBEE3B35BA29EAC9CA /* Models */ = {
@@ -144,6 +204,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					1C31BDED5C83345C3BB7F191 = {
+						DevelopmentTeam = Q4H92B5WW9;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 48D8FD2A3B50F07D119D0A32 /* Build configuration list for PBXProject "FlowReader" */;
@@ -184,11 +248,23 @@
 				D10E6FD482994AA87B9877BB /* AppState.swift in Sources */,
 				0D6366CB011837B05B93D41B /* Book.swift in Sources */,
 				BDDFCFB65A36A788649AAC52 /* Bookmark.swift in Sources */,
+				6FB7F4927A4BB96F88D2B4CB /* BookmarksView.swift in Sources */,
+				12EF0B324F6B7913C5076991 /* BrightnessGestureView.swift in Sources */,
+				B18ED34D2E4D4DD304482B3A /* BrowserView.swift in Sources */,
 				18CDCFBB98BE8F4B2CE11754 /* ContentView.swift in Sources */,
+				A9A0E633CEB13BD9CEB68BEE /* EPUBParser.swift in Sources */,
+				D15C0308CF78DA8D96D123B4 /* FB2Parser.swift in Sources */,
 				834BDAF31D4A681E2ADC12C4 /* FileStorageService.swift in Sources */,
 				10910B11A7FD46E2A4EC250D /* FlowReaderApp.swift in Sources */,
 				F9176E6814047DFEDB1F0DED /* ImportService.swift in Sources */,
+				B483519039F0227B78327373 /* LibraryView.swift in Sources */,
+				8723263786A24F09DA267DC6 /* ReaderControlsView.swift in Sources */,
 				74280B6A9122E9B57947375F /* ReaderSettings.swift in Sources */,
+				B860B2558D5FD47E9AE80919 /* ReaderSettingsPanel.swift in Sources */,
+				0B15EEE5FDFE4E975F267CEE /* ReaderView.swift in Sources */,
+				BF4E76D7AC6F13EFEA966D2A /* SelectionToolbar.swift in Sources */,
+				5745B152C67538C30E2A31B4 /* SidebarView.swift in Sources */,
+				49409DB941FA868B37890DED /* TOCView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,13 +398,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Q4H92B5WW9;
 				INFOPLIST_FILE = FlowReader/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.flowreader.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vsharavin.flowreader;
 				PRODUCT_NAME = FlowReader;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -342,13 +420,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Q4H92B5WW9;
 				INFOPLIST_FILE = FlowReader/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.flowreader.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vsharavin.flowreader;
 				PRODUCT_NAME = FlowReader;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
