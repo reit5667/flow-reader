@@ -9,10 +9,14 @@ struct LibraryView: View {
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
+    @State private var navPath = NavigationPath()
     @State private var coverPickBook: Book? = nil
+    @State private var infoBook: Book? = nil
+    @State private var bookToDelete: Book? = nil
+    @State private var showDeleteConfirm = false
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             Group {
                 if books.isEmpty {
                     emptyState
@@ -26,9 +30,26 @@ struct LibraryView: View {
                                 .buttonStyle(.plain)
                                 .contextMenu {
                                     Button {
+                                        navPath.append(book)
+                                    } label: {
+                                        Label("Открыть", systemImage: "book")
+                                    }
+                                    Button {
+                                        infoBook = book
+                                    } label: {
+                                        Label("Информация", systemImage: "info.circle")
+                                    }
+                                    Button {
                                         coverPickBook = book
                                     } label: {
                                         Label("Сменить обложку", systemImage: "photo")
+                                    }
+                                    Divider()
+                                    Button(role: .destructive) {
+                                        bookToDelete = book
+                                        showDeleteConfirm = true
+                                    } label: {
+                                        Label("Удалить", systemImage: "trash")
                                     }
                                 }
                             }
@@ -40,9 +61,7 @@ struct LibraryView: View {
             .navigationTitle("Библиотека")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        onOpenSidebar?()
-                    } label: {
+                    Button { onOpenSidebar?() } label: {
                         Image(systemName: "line.3.horizontal")
                     }
                 }
@@ -55,34 +74,30 @@ struct LibraryView: View {
                     onOpenSidebar: {},
                     startURL: googleImagesURL(title: book.title, author: book.author),
                     coverPickMode: true,
-                    onCoverPicked: { imageURL in
-                        saveCover(for: book, from: imageURL)
-                    }
+                    onCoverPicked: { imageURL in saveCover(for: book, from: imageURL) }
                 )
+            }
+            .sheet(item: $infoBook) { book in
+                BookInfoView(book: book)
+            }
+            .alert("Удалить книгу?", isPresented: $showDeleteConfirm, presenting: bookToDelete) { book in
+                Button("Удалить", role: .destructive) { deleteBook(book) }
+                Button("Отмена", role: .cancel) {}
+            } message: { book in
+                Text("\"\(book.title)\" будет удалена из библиотеки.")
             }
         }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "books.vertical")
-                .font(.system(size: 56))
-                .foregroundStyle(.secondary)
-            Text("Добавьте первую книгу")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-            Text("Откройте .epub или .fb2 файл\nчерез приложение Файлы")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
+    // MARK: - Actions
 
-    private func googleImagesURL(title: String, author: String) -> String {
-        let query = "\(title) \(author) книга обложка"
-        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        return "https://www.google.com/search?tbm=isch&q=\(encoded)"
+    private func deleteBook(_ book: Book) {
+        try? FileStorageService.shared.deleteBook(relativePath: book.filePath)
+        if let coverPath = book.coverImagePath {
+            try? FileStorageService.shared.deleteCover(relativePath: coverPath)
+        }
+        modelContext.delete(book)
+        try? modelContext.save()
     }
 
     private func saveCover(for book: Book, from imageURL: URL) {
@@ -103,22 +118,99 @@ struct LibraryView: View {
                     book.coverImagePath = relativePath
                     try? modelContext.save()
                 }
-            } catch {
-                // Cover save failed silently — book still usable
-            }
+            } catch {}
         }
     }
 
     private func decodeDataURL(_ url: URL) throws -> Data {
         let raw = url.absoluteString
-        guard let commaIdx = raw.firstIndex(of: ",") else {
-            throw URLError(.badURL)
-        }
+        guard let commaIdx = raw.firstIndex(of: ",") else { throw URLError(.badURL) }
         let payload = String(raw[raw.index(after: commaIdx)...])
         guard let data = Data(base64Encoded: payload, options: .ignoreUnknownCharacters) else {
             throw URLError(.cannotDecodeContentData)
         }
         return data
+    }
+
+    private func googleImagesURL(title: String, author: String) -> String {
+        let query = "\(title) \(author) книга обложка"
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        return "https://www.google.com/search?tbm=isch&q=\(encoded)"
+    }
+
+    // MARK: - Empty state
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 56))
+                .foregroundStyle(.secondary)
+            Text("Добавьте первую книгу")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+            Text("Откройте .epub или .fb2 файл\nчерез приложение Файлы")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - BookInfoView
+
+private struct BookInfoView: View {
+    let book: Book
+    @Environment(\.dismiss) private var dismiss
+
+    private var fileSize: String {
+        let url = FileStorageService.shared.absoluteBookURL(relativePath: book.filePath)
+        let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+        return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    infoRow(label: "Название", value: book.title)
+                    infoRow(label: "Автор", value: book.author)
+                    infoRow(label: "Формат", value: book.format.rawValue.uppercased())
+                }
+                Section {
+                    infoRow(label: "Размер", value: fileSize)
+                    infoRow(label: "Добавлена", value: Self.dateFormatter.string(from: book.addedAt))
+                    if let opened = book.lastOpenedAt {
+                        infoRow(label: "Открывалась", value: Self.dateFormatter.string(from: opened))
+                    }
+                    infoRow(label: "Прочитано", value: "\(Int(book.readingProgress * 100))%")
+                }
+            }
+            .navigationTitle("Информация")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Готово") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .multilineTextAlignment(.trailing)
+        }
     }
 }
 
