@@ -7,6 +7,7 @@ struct ContentView: View {
 
     @State private var sidebarOpen = false
     @State private var activeSection: AppSection = .library
+    @AppStorage("browserStartURL") private var browserStartURL = "https://flibusta.is"
 
     var body: some View {
         @Bindable var appState = appState
@@ -51,19 +52,9 @@ struct ContentView: View {
         case .library:
             LibraryView(onOpenSidebar: { sidebarOpen = true })
         case .browser:
-            BrowserView(onOpenSidebar: { sidebarOpen = true })
+            BrowserView(onOpenSidebar: { sidebarOpen = true }, startURL: browserStartURL)
         case .settings:
-            NavigationStack {
-                Color.clear
-                    .navigationTitle("Настройки")
-                    .toolbar {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button { sidebarOpen = true } label: {
-                                Image(systemName: "line.3.horizontal")
-                            }
-                        }
-                    }
-            }
+            SettingsView(onOpenSidebar: { sidebarOpen = true })
         }
     }
 
