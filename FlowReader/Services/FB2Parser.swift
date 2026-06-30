@@ -220,9 +220,10 @@ final class FB2Parser: NSObject, XMLParserDelegate {
         case "author" where inTitleInfo:
             inAuthor = false
             let fn = firstNameBuf.trimmingCharacters(in: .whitespacesAndNewlines)
+            let mn = middleNameBuf.trimmingCharacters(in: .whitespacesAndNewlines)
             let ln = lastNameBuf.trimmingCharacters(in: .whitespacesAndNewlines)
             let nn = nicknameBuf.trimmingCharacters(in: .whitespacesAndNewlines)
-            var name = [fn, ln].filter { !$0.isEmpty }.joined(separator: " ")
+            var name = [fn, mn, ln].filter { !$0.isEmpty }.joined(separator: " ")
             if name.isEmpty { name = nn }
             // Normalize all Unicode whitespace (including non-breaking spaces)
             name = name.components(separatedBy: .whitespaces).filter { !$0.isEmpty }.joined(separator: " ")

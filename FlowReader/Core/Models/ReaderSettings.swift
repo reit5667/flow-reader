@@ -63,6 +63,14 @@ enum ReaderMargins: String, Codable, CaseIterable {
         case .wide: return "40px"
         }
     }
+
+    var pixelValue: Int {
+        switch self {
+        case .narrow: return 12
+        case .medium: return 24
+        case .wide: return 40
+        }
+    }
 }
 
 enum ReaderOrientation: String, Codable, CaseIterable {

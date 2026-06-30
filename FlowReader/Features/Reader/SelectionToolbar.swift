@@ -9,17 +9,31 @@ struct SelectionToolbar: View {
     let onDismiss: () -> Void
 
     private var shareText: String {
-        "\"\(selectedText)\"\n— \(author), \(bookTitle)"
+        "\(selectedText)\n— \(author), \(bookTitle)"
     }
 
-    private var obsidianContent: String {
-        "> \"\(selectedText)\"\n> — \(author), *\(bookTitle)*\n\n#reader"
+    private var shortTitle: String {
+        let parts = bookTitle.components(separatedBy: CharacterSet(charactersIn: "!,.:;"))
+        let first = parts.first?.trimmingCharacters(in: .whitespaces) ?? bookTitle
+        let words = first.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+        return words.count <= 5 ? first : words.prefix(5).joined(separator: " ")
     }
 
-    private func sendToObsidian() {
-        guard let encoded = obsidianContent.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "obsidian://new?vault=Obsidian%20Vault&content=\(encoded)") else { return }
-        UIApplication.shared.open(url)
+    private var quoteFormatted: String {
+        "\(selectedText)\n— \(author), \(shortTitle) #read"
+    }
+
+    private func sendToFlowtaker() {
+        let botUsername = "flowtakerbot"
+        // Always copy to clipboard — tg:// doesn't reliably pre-fill bot messages
+        UIPasteboard.general.string = quoteFormatted
+
+        if let tgURL = URL(string: "tg://resolve?domain=\(botUsername)"),
+           UIApplication.shared.canOpenURL(tgURL) {
+            UIApplication.shared.open(tgURL)
+        } else if let tgWeb = URL(string: "https://t.me/\(botUsername)") {
+            UIApplication.shared.open(tgWeb)
+        }
         onDismiss()
     }
 
@@ -38,8 +52,8 @@ struct SelectionToolbar: View {
 
                 Divider().frame(height: 28)
 
-                Button(action: sendToObsidian) {
-                    Label("Obsidian", systemImage: "square.and.pencil")
+                Button(action: sendToFlowtaker) {
+                    Label("Flowtaker", systemImage: "paperplane")
                         .font(.subheadline)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)

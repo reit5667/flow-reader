@@ -185,14 +185,28 @@ struct ReaderView: View {
 
     private func seek(to progress: Float) {
         guard let webView = webViewRef else { return }
-        webView.evaluateJavaScript("document.body.scrollHeight - window.innerHeight") { result, _ in
-            let total: Double
-            if let n = result as? NSNumber { total = n.doubleValue }
-            else if let d = result as? Double { total = d }
-            else { return }
-            guard total > 0 else { return }
-            let y = CGFloat(progress) * CGFloat(total)
-            webView.scrollView.setContentOffset(CGPoint(x: 0, y: y), animated: true)
+        if settings.isPageMode == true {
+            webView.evaluateJavaScript("document.body.scrollWidth - window.innerWidth") { result, _ in
+                let total: Double
+                if let n = result as? NSNumber { total = n.doubleValue }
+                else if let d = result as? Double { total = d }
+                else { return }
+                guard total > 0 else { return }
+                let raw = CGFloat(progress) * CGFloat(total)
+                let pageW = webView.scrollView.bounds.width
+                let x = pageW > 0 ? round(raw / pageW) * pageW : raw
+                webView.scrollView.setContentOffset(CGPoint(x: x, y: 0), animated: true)
+            }
+        } else {
+            webView.evaluateJavaScript("document.body.scrollHeight - window.innerHeight") { result, _ in
+                let total: Double
+                if let n = result as? NSNumber { total = n.doubleValue }
+                else if let d = result as? Double { total = d }
+                else { return }
+                guard total > 0 else { return }
+                let y = CGFloat(progress) * CGFloat(total)
+                webView.scrollView.setContentOffset(CGPoint(x: 0, y: y), animated: true)
+            }
         }
     }
 
@@ -240,15 +254,29 @@ struct ReaderView: View {
     }
 
     private func seekToChapter(index: Int) {
-        let js = """
-        (function() {
-            var el = document.getElementById('fr-chapter-\(index)');
-            if (el) {
-                el.scrollIntoView({block: 'start'});
-                window.scrollBy(0, -8);
-            }
-        })();
-        """
+        let js: String
+        if settings.isPageMode == true {
+            js = """
+            (function() {
+                var el = document.getElementById('fr-chapter-\(index)');
+                if (el) {
+                    el.scrollIntoView({behavior: 'instant', block: 'start'});
+                    var pageW = window.innerWidth;
+                    window.scrollTo(Math.round(window.scrollX / pageW) * pageW, 0);
+                }
+            })();
+            """
+        } else {
+            js = """
+            (function() {
+                var el = document.getElementById('fr-chapter-\(index)');
+                if (el) {
+                    el.scrollIntoView({block: 'start'});
+                    window.scrollBy(0, -8);
+                }
+            })();
+            """
+        }
         webViewRef?.evaluateJavaScript(js)
     }
 }
@@ -288,10 +316,14 @@ struct ReaderWebView: UIViewRepresentable {
         config.userContentController.add(context.coordinator, name: "selectionHandler")
 
         let webView = WKWebView(frame: .zero, configuration: config)
-        webView.scrollView.isPagingEnabled = false
-        webView.scrollView.bounces = true
+        let initialPageMode = settings.isPageMode == true
+        webView.scrollView.isPagingEnabled = initialPageMode
+        webView.scrollView.bounces = !initialPageMode
+        webView.scrollView.alwaysBounceVertical = !initialPageMode
         webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.showsHorizontalScrollIndicator = false
         webView.backgroundColor = UIColor(hex: settings.theme.backgroundColor)
+        webView.tintColor = selectionTintColor(for: settings)
         webView.isOpaque = true
         webView.navigationDelegate = context.coordinator
         context.coordinator.webView = webView
@@ -304,6 +336,16 @@ struct ReaderWebView: UIViewRepresentable {
         tapGesture.cancelsTouchesInView = false
         tapGesture.delegate = context.coordinator
         webView.addGestureRecognizer(tapGesture)
+
+        // Long press recognizer — blocks controls from opening on long press
+        let longPress = UILongPressGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleLongPress(_:))
+        )
+        longPress.minimumPressDuration = 0.35
+        longPress.cancelsTouchesInView = false
+        longPress.delegate = context.coordinator
+        webView.addGestureRecognizer(longPress)
 
         // Brightness pan recognizer — left 15%, vertical
         let brightnessPan = UIPanGestureRecognizer(
@@ -322,6 +364,26 @@ struct ReaderWebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         let css = generateCSS(settings: settings)
+        let isPageMode = settings.isPageMode == true
+        let scrollListenerJS = isPageMode ? """
+        window.removeEventListener('scroll', window.__frScrollHandler);
+        window.__frScrollHandler = function() {
+            var total = document.body.scrollWidth - window.innerWidth;
+            if (total > 0) {
+                window.webkit.messageHandlers.scrollHandler.postMessage(window.scrollX / total);
+            }
+        };
+        window.addEventListener('scroll', window.__frScrollHandler, { passive: true });
+        """ : """
+        window.removeEventListener('scroll', window.__frScrollHandler);
+        window.__frScrollHandler = function() {
+            var total = document.body.scrollHeight - window.innerHeight;
+            if (total > 0) {
+                window.webkit.messageHandlers.scrollHandler.postMessage(window.scrollY / total);
+            }
+        };
+        window.addEventListener('scroll', window.__frScrollHandler, { passive: true });
+        """
         let js = """
         (function() {
             var el = document.getElementById('__fr_style');
@@ -331,12 +393,16 @@ struct ReaderWebView: UIViewRepresentable {
                 if (document.head) document.head.appendChild(el);
             }
             if (el) el.textContent = `\(css)`;
+            \(scrollListenerJS)
         })();
         """
         webView.evaluateJavaScript(js)
-        let isPageMode = settings.isPageMode == true
         webView.scrollView.isPagingEnabled = isPageMode
+        webView.scrollView.bounces = !isPageMode
+        webView.scrollView.alwaysBounceVertical = !isPageMode
+        webView.scrollView.showsHorizontalScrollIndicator = false
         webView.backgroundColor = UIColor(hex: settings.theme.backgroundColor)
+        webView.tintColor = selectionTintColor(for: settings)
         context.coordinator.isOverlayActive = isOverlayActive
         context.coordinator.isPageMode = isPageMode
     }
@@ -410,22 +476,55 @@ struct ReaderWebView: UIViewRepresentable {
 
     private func wrapHTML(body: String, settings: ReaderSettings, savedProgress: Float, isFullDocument: Bool = false) -> String {
         let css = generateCSS(settings: settings)
-        let progressJS = savedProgress > 0 ? """
-        window.addEventListener('load', function() {
-            setTimeout(function() {
-                var total = document.body.scrollHeight - window.innerHeight;
-                window.scrollTo(0, total * \(savedProgress));
-            }, 100);
-        });
-        """ : ""
+        let isPageMode = settings.isPageMode == true
 
-        let scrollJS = """
-        window.addEventListener('scroll', function() {
+        let progressJS: String
+        if savedProgress > 0 {
+            progressJS = isPageMode ? """
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    var total = document.body.scrollWidth - window.innerWidth;
+                    var raw = total * \(savedProgress);
+                    var pageW = window.innerWidth;
+                    window.scrollTo(Math.round(raw / pageW) * pageW, 0);
+                }, 200);
+            });
+            """ : """
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    var total = document.body.scrollHeight - window.innerHeight;
+                    window.scrollTo(0, total * \(savedProgress));
+                }, 100);
+            });
+            """
+        } else {
+            progressJS = ""
+        }
+
+        let scrollJS = isPageMode ? """
+        window.__frScrollHandler = function() {
+            var total = document.body.scrollWidth - window.innerWidth;
+            if (total > 0) {
+                window.webkit.messageHandlers.scrollHandler.postMessage(window.scrollX / total);
+            }
+        };
+        window.addEventListener('scroll', window.__frScrollHandler, { passive: true });
+        var __frSelTimer = null;
+        document.addEventListener('selectionchange', function() {
+            clearTimeout(__frSelTimer);
+            __frSelTimer = setTimeout(function() {
+                var text = window.getSelection().toString().trim();
+                window.webkit.messageHandlers.selectionHandler.postMessage(text);
+            }, 300);
+        });
+        """ : """
+        window.__frScrollHandler = function() {
             var total = document.body.scrollHeight - window.innerHeight;
             if (total > 0) {
                 window.webkit.messageHandlers.scrollHandler.postMessage(window.scrollY / total);
             }
-        }, { passive: true });
+        };
+        window.addEventListener('scroll', window.__frScrollHandler, { passive: true });
         var __frSelTimer = null;
         document.addEventListener('selectionchange', function() {
             clearTimeout(__frSelTimer);
@@ -460,9 +559,48 @@ struct ReaderWebView: UIViewRepresentable {
         """
     }
 
+    private func selectionTintColor(for settings: ReaderSettings) -> UIColor {
+        settings.theme.isLight
+            ? UIColor(red: 0, green: 0.39, blue: 1.0, alpha: 1.0)
+            : UIColor(red: 0.9, green: 0.9, blue: 1.0, alpha: 1.0)
+    }
+
     private func generateCSS(settings: ReaderSettings) -> String {
-        let selectionBg = settings.theme.isLight ? "rgba(0,100,220,0.25)" : "rgba(255,255,255,0.3)"
+        let selectionBg = settings.theme.isLight ? "rgba(0, 100, 255, 0.5)" : "rgba(255,255,255,0.45)"
         let selectionFg = settings.theme.isLight ? "#000000" : "#ffffff"
+        let isPageMode = settings.isPageMode == true
+        let m = settings.margins.pixelValue
+
+        let bodyLayout = isPageMode ? """
+        html { height: 100%; overflow-y: hidden; }
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            -webkit-column-width: 100vw;
+            -webkit-column-gap: 0px;
+            -webkit-column-fill: auto;
+        }
+        body > * {
+            padding-left: \(m)px;
+            padding-right: \(m)px;
+        }
+        body > p, body > div, body > section, body > article {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        body > *:first-child { margin-top: 16px; }
+        """ : """
+        body {
+            padding: \(settings.margins.cssValue);
+            padding-bottom: 80px;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        """
+
         return """
         * { box-sizing: border-box; }
         html, body {
@@ -475,16 +613,12 @@ struct ReaderWebView: UIViewRepresentable {
             line-height: \(settings.lineSpacing.cssValue);
             -webkit-user-select: text;
         }
-        body {
-            padding: \(settings.margins.cssValue);
-            padding-bottom: 80px;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
-        ::selection { background-color: \(selectionBg); color: \(selectionFg); }
+        \(bodyLayout)
+        ::selection { background-color: \(selectionBg) !important; }
+        ::-webkit-selection { background-color: \(selectionBg) !important; }
         p { margin: 0.4em 0; text-indent: 1.5em; }
         h1, h2, h3, h4 { font-weight: bold; margin: 1em 0 0.4em; text-indent: 0; }
-        img { max-width: 100%; height: auto; }
+        img { max-width: 100%; height: auto; display: block; }
         a { color: inherit; }
         """
     }
@@ -501,6 +635,7 @@ struct ReaderWebView: UIViewRepresentable {
         var onLoadingChanged: ((Bool) -> Void)?
         var isOverlayActive = false
         var isPageMode = false
+        var isLongPressActive = false
         weak var brightnessPanGesture: UIPanGestureRecognizer?
         private var brightnessDragStart: CGFloat = 0
         private var saveTimer: Timer?
@@ -541,11 +676,12 @@ struct ReaderWebView: UIViewRepresentable {
         // MARK: UIKit gesture handlers
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
-            guard !isOverlayActive else { return }
+            guard !isOverlayActive, !isLongPressActive else { return }
+            guard let view = gesture.view else { return }
+            let x = gesture.location(in: view).x
+            let w = view.bounds.width
 
-            if isPageMode, let view = gesture.view {
-                let x = gesture.location(in: view).x
-                let w = view.bounds.width
+            if isPageMode {
                 if x < w * 0.3 {
                     turnPage(forward: false)
                 } else if x > w * 0.7 {
@@ -553,19 +689,43 @@ struct ReaderWebView: UIViewRepresentable {
                 } else {
                     onTap?()
                 }
-                return
+            } else {
+                // Edges (~20% each side) are dead zones — only center opens controls
+                if x >= w * 0.2 && x <= w * 0.8 {
+                    onTap?()
+                }
             }
+        }
 
-            onTap?()
+        @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+            switch gesture.state {
+            case .began:
+                isLongPressActive = true
+            case .ended, .cancelled, .failed:
+                // Small delay so any pending tap handler sees the flag before it clears
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                    self?.isLongPressActive = false
+                }
+            default:
+                break
+            }
         }
 
         private func turnPage(forward: Bool) {
             guard let sv = webView?.scrollView else { return }
-            let h = sv.bounds.height
-            let y = forward
-                ? min(sv.contentOffset.y + h, max(0, sv.contentSize.height - h))
-                : max(sv.contentOffset.y - h, 0)
-            sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
+            if isPageMode {
+                let w = sv.bounds.width
+                let x = forward
+                    ? min(sv.contentOffset.x + w, max(0, sv.contentSize.width - w))
+                    : max(sv.contentOffset.x - w, 0)
+                sv.setContentOffset(CGPoint(x: x, y: sv.contentOffset.y), animated: true)
+            } else {
+                let h = sv.bounds.height
+                let y = forward
+                    ? min(sv.contentOffset.y + h, max(0, sv.contentSize.height - h))
+                    : max(sv.contentOffset.y - h, 0)
+                sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
+            }
         }
 
         @objc func handleBrightnessPan(_ gesture: UIPanGestureRecognizer) {
