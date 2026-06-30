@@ -19,6 +19,9 @@ final class Book {
     var readingProgress: Float
     var currentOffset: Int
 
+    var pageCount: Int?
+    var isFavorite: Bool
+
     @Relationship(deleteRule: .cascade) var bookmarks: [Bookmark]
 
     init(
@@ -26,7 +29,8 @@ final class Book {
         author: String,
         filePath: String,
         format: BookFormat,
-        coverImagePath: String? = nil
+        coverImagePath: String? = nil,
+        pageCount: Int? = nil
     ) {
         self.id = UUID()
         self.title = title
@@ -38,6 +42,8 @@ final class Book {
         self.lastOpenedAt = nil
         self.readingProgress = 0
         self.currentOffset = 0
+        self.pageCount = pageCount
+        self.isFavorite = false
         self.bookmarks = []
     }
 }

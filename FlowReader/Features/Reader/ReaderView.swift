@@ -8,7 +8,9 @@ struct ReaderView: View {
 
     @Query private var settingsQuery: [ReaderSettings]
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppState.self) private var appState
 
+    @State private var isLoading = true
     @State private var showControls = false
     @State private var showSettings = false
     @State private var showTOC = false
@@ -53,9 +55,23 @@ struct ReaderView: View {
                             withAnimation(.easeOut(duration: 0.2)) { brightnessValue = nil }
                         }
                     }
-                }
+                },
+                onLoadingChanged: { loading in
+                    withAnimation(.easeOut(duration: 0.2)) { isLoading = loading }
+                },
+                isOverlayActive: showControls || showSettings
             )
             .ignoresSafeArea()
+            .onAppear { appState.isReading = true }
+            .onDisappear { appState.isReading = false }
+
+            if isLoading {
+                Color(UIColor.systemBackground).opacity(0.9)
+                    .ignoresSafeArea()
+                    .overlay(ProgressView())
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
 
             if let b = brightnessValue {
                 BrightnessGestureView(brightness: b)
@@ -93,6 +109,13 @@ struct ReaderView: View {
             }
 
             if showControls && !showSettings {
+                // Backdrop: tap on reading area dismisses controls; buttons in controls take SwiftUI priority
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.1)) { showControls = false }
+                    }
                 ReaderControlsView(
                     book: book,
                     progress: $progress,
@@ -132,6 +155,7 @@ struct ReaderView: View {
                 .transition(.opacity)
             }
         }
+        .background(NavigationBackSwipeEnabler())
         .onAppear { progress = book.readingProgress }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(book.title)
@@ -152,13 +176,14 @@ struct ReaderView: View {
     // MARK: - Actions
 
     private func seek(to progress: Float) {
-        let js = """
-        (function() {
-            var total = document.body.scrollHeight - window.innerHeight;
-            window.scrollTo(0, total * \(progress));
-        })();
-        """
-        webViewRef?.evaluateJavaScript(js)
+        guard let webView = webViewRef else { return }
+        // Use UIKit scrollView for reliable programmatic seek;
+        // JS window.scrollTo can be ignored by WKWebView in some states.
+        webView.evaluateJavaScript("document.body.scrollHeight - window.innerHeight") { result, _ in
+            guard let total = result as? Double, total > 0 else { return }
+            let y = CGFloat(progress) * CGFloat(total)
+            webView.scrollView.setContentOffset(CGPoint(x: 0, y: y), animated: false)
+        }
     }
 
     private func addBookmark() {
@@ -248,6 +273,10 @@ struct ReaderWebView: UIViewRepresentable {
     var onSelectionChange: ((String?) -> Void)? = nil
     var onTap: (() -> Void)? = nil
     var onBrightnessChange: ((CGFloat) -> Void)? = nil
+    var onLoadingChanged: ((Bool) -> Void)? = nil
+    // When any overlay (controls, settings) is visible, suppress WKWebView tap
+    // so UIKit gesture doesn't race with SwiftUI button actions.
+    var isOverlayActive: Bool = false
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
@@ -255,7 +284,8 @@ struct ReaderWebView: UIViewRepresentable {
             onProgressChange: onProgressChange,
             onSelectionChange: onSelectionChange,
             onTap: onTap,
-            onBrightnessChange: onBrightnessChange
+            onBrightnessChange: onBrightnessChange,
+            onLoadingChanged: onLoadingChanged
         )
     }
 
@@ -307,6 +337,7 @@ struct ReaderWebView: UIViewRepresentable {
         """
         webView.evaluateJavaScript(js)
         webView.backgroundColor = UIColor(hex: settings.theme.backgroundColor)
+        context.coordinator.isOverlayActive = isOverlayActive
     }
 
     // MARK: - Content loading
@@ -463,6 +494,8 @@ struct ReaderWebView: UIViewRepresentable {
         var onSelectionChange: ((String?) -> Void)?
         var onTap: (() -> Void)?
         var onBrightnessChange: ((CGFloat) -> Void)?
+        var onLoadingChanged: ((Bool) -> Void)?
+        var isOverlayActive = false
         weak var brightnessPanGesture: UIPanGestureRecognizer?
         private var brightnessDragStart: CGFloat = 0
         private var saveTimer: Timer?
@@ -471,12 +504,14 @@ struct ReaderWebView: UIViewRepresentable {
              onProgressChange: ((Float) -> Void)?,
              onSelectionChange: ((String?) -> Void)?,
              onTap: (() -> Void)?,
-             onBrightnessChange: ((CGFloat) -> Void)?) {
+             onBrightnessChange: ((CGFloat) -> Void)?,
+             onLoadingChanged: ((Bool) -> Void)?) {
             self.book = book
             self.onProgressChange = onProgressChange
             self.onSelectionChange = onSelectionChange
             self.onTap = onTap
             self.onBrightnessChange = onBrightnessChange
+            self.onLoadingChanged = onLoadingChanged
         }
 
         // MARK: WKScriptMessageHandler
@@ -501,6 +536,7 @@ struct ReaderWebView: UIViewRepresentable {
         // MARK: UIKit gesture handlers
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
+            guard !isOverlayActive else { return }
             onTap?()
         }
 
@@ -527,9 +563,8 @@ struct ReaderWebView: UIViewRepresentable {
 
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-            if gestureRecognizer === brightnessPanGesture || other === brightnessPanGesture {
-                return false
-            }
+            // Brightness pan must coexist with WKWebView's scroll gesture.
+            // Scroll is disabled via isScrollEnabled=false in .began, so no conflict.
             return true
         }
 
@@ -545,7 +580,23 @@ struct ReaderWebView: UIViewRepresentable {
 
         // MARK: WKNavigationDelegate
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {}
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            DispatchQueue.main.async { self.onLoadingChanged?(false) }
+        }
+    }
+}
+
+// MARK: - NavigationBackSwipeEnabler
+
+// When navigationBar is hidden, iOS disables interactivePopGestureRecognizer.
+// This UIViewControllerRepresentable re-enables it so swipe-back still works.
+private struct NavigationBackSwipeEnabler: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        UIViewController()
+    }
+    func updateUIViewController(_ vc: UIViewController, context: Context) {
+        vc.navigationController?.interactivePopGestureRecognizer?.isEnabled = true
+        vc.navigationController?.interactivePopGestureRecognizer?.delegate = nil
     }
 }
 

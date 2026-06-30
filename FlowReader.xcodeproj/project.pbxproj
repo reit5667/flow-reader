@@ -14,6 +14,7 @@
 		18CDCFBB98BE8F4B2CE11754 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E513449E9FFE39DE0B2A69 /* ContentView.swift */; };
 		49409DB941FA868B37890DED /* TOCView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 819BFABE77A83A9FAA2B5D27 /* TOCView.swift */; };
 		5745B152C67538C30E2A31B4 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E63E3CCC5625AB7C328A5067 /* SidebarView.swift */; };
+		6711C5812D83D49AF0DBE4AE /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C34C9D57E5AFDD49272E035 /* DesignSystem.swift */; };
 		6FB7F4927A4BB96F88D2B4CB /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8214A3A17EC5E1F7A9CDB6EE /* BookmarksView.swift */; };
 		74280B6A9122E9B57947375F /* ReaderSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A75BA336FDE2BE2D93D2EAA5 /* ReaderSettings.swift */; };
 		834BDAF31D4A681E2ADC12C4 /* FileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18263F47D915C2BD2BF8C118 /* FileStorageService.swift */; };
@@ -35,9 +36,10 @@
 		00E513449E9FFE39DE0B2A69 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		03B708865D37C318576E6C48 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		043BCC3159CF5FF12258351B /* BrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserView.swift; sourceTree = "<group>"; };
+		0C34C9D57E5AFDD49272E035 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		18263F47D915C2BD2BF8C118 /* FileStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageService.swift; sourceTree = "<group>"; };
 		2255F5F6CDF5581602FB9096 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		2A1994709C4CA31C788F9F8C /* FlowReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A1994709C4CA31C788F9F8C /* FlowReader.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlowReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AD578CA14C43C740C234B3F /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		2D359A825C3D01220BCCA3C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		49F553081DA3C03E8AB367F8 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 		D532AE5A4742CD028B6C1B4F /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				0C34C9D57E5AFDD49272E035 /* DesignSystem.swift */,
 				F5334ACBEE3B35BA29EAC9CA /* Models */,
 			);
 			path = Core;
@@ -216,6 +219,7 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					1C31BDED5C83345C3BB7F191 = {
+						DevelopmentTeam = Q4H92B5WW9;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -262,6 +266,7 @@
 				12EF0B324F6B7913C5076991 /* BrightnessGestureView.swift in Sources */,
 				B18ED34D2E4D4DD304482B3A /* BrowserView.swift in Sources */,
 				18CDCFBB98BE8F4B2CE11754 /* ContentView.swift in Sources */,
+				6711C5812D83D49AF0DBE4AE /* DesignSystem.swift in Sources */,
 				A9A0E633CEB13BD9CEB68BEE /* EPUBParser.swift in Sources */,
 				D15C0308CF78DA8D96D123B4 /* FB2Parser.swift in Sources */,
 				834BDAF31D4A681E2ADC12C4 /* FileStorageService.swift in Sources */,
@@ -410,7 +415,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 273XW2F358;
+				DEVELOPMENT_TEAM = Q4H92B5WW9;
 				INFOPLIST_FILE = FlowReader/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -432,7 +437,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 273XW2F358;
+				DEVELOPMENT_TEAM = Q4H92B5WW9;
 				INFOPLIST_FILE = FlowReader/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

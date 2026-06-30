@@ -1,71 +1,64 @@
 import SwiftUI
 import SwiftData
 
+enum BookFilter: String, CaseIterable {
+    case all        = "Все"
+    case inProgress = "Читаю"
+    case notStarted = "Не начато"
+    case completed  = "Завершено"
+    case favorites  = "Избранное"
+}
+
 struct LibraryView: View {
-    var onOpenSidebar: (() -> Void)? = nil
+    var showUI: Bool = false
+    var onToggleUI: (() -> Void)? = nil
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Book.lastOpenedAt, order: .reverse) private var books: [Book]
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
 
     @State private var navPath = NavigationPath()
     @State private var coverPickBook: Book? = nil
     @State private var infoBook: Book? = nil
     @State private var bookToDelete: Book? = nil
     @State private var showDeleteConfirm = false
+    @State private var searchText = ""
+    @State private var activeFilter: BookFilter = .all
+    @State private var showFilterSheet = false
+
+    private var filteredBooks: [Book] {
+        var result = books
+        if !searchText.isEmpty {
+            result = result.filter {
+                $0.title.localizedCaseInsensitiveContains(searchText) ||
+                $0.author.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        switch activeFilter {
+        case .all:        break
+        case .inProgress: result = result.filter { $0.readingProgress > 0 && $0.readingProgress < 1 }
+        case .notStarted: result = result.filter { $0.readingProgress == 0 }
+        case .completed:  result = result.filter { $0.readingProgress >= 1 }
+        case .favorites:  result = result.filter { $0.isFavorite }
+        }
+        return result
+    }
 
     var body: some View {
         NavigationStack(path: $navPath) {
-            Group {
+            ZStack {
+                DS.Color.background
+                    .ignoresSafeArea()
+                    .onTapGesture { onToggleUI?() }
+
                 if books.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(books) { book in
-                                NavigationLink(value: book) {
-                                    BookCard(book: book)
-                                }
-                                .buttonStyle(.plain)
-                                .contextMenu {
-                                    Button {
-                                        navPath.append(book)
-                                    } label: {
-                                        Label("Открыть", systemImage: "book")
-                                    }
-                                    Button {
-                                        infoBook = book
-                                    } label: {
-                                        Label("Информация", systemImage: "info.circle")
-                                    }
-                                    Button {
-                                        coverPickBook = book
-                                    } label: {
-                                        Label("Сменить обложку", systemImage: "photo")
-                                    }
-                                    Divider()
-                                    Button(role: .destructive) {
-                                        bookToDelete = book
-                                        showDeleteConfirm = true
-                                    } label: {
-                                        Label("Удалить", systemImage: "trash")
-                                    }
-                                }
-                            }
-                        }
-                        .padding(16)
-                    }
+                    bookGrid
                 }
             }
-            .navigationTitle("Библиотека")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { onOpenSidebar?() } label: {
-                        Image(systemName: "line.3.horizontal")
-                    }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Book.self) { book in
                 ReaderView(book: book)
             }
@@ -78,7 +71,9 @@ struct LibraryView: View {
                 )
             }
             .sheet(item: $infoBook) { book in
-                BookInfoView(book: book)
+                BookInfoView(book: book) {
+                    navPath.append(book)
+                }
             }
             .alert("Удалить книгу?", isPresented: $showDeleteConfirm, presenting: bookToDelete) { book in
                 Button("Удалить", role: .destructive) { deleteBook(book) }
@@ -86,7 +81,125 @@ struct LibraryView: View {
             } message: { book in
                 Text("\"\(book.title)\" будет удалена из библиотеки.")
             }
+            .confirmationDialog("Фильтр", isPresented: $showFilterSheet, titleVisibility: .visible) {
+                ForEach(BookFilter.allCases, id: \.self) { filter in
+                    Button(filter.rawValue) { activeFilter = filter }
+                }
+                Button("Отмена", role: .cancel) {}
+            }
         }
+    }
+
+    // MARK: - Book grid
+
+    private var bookGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(filteredBooks) { book in
+                    NavigationLink(value: book) {
+                        BookCard(book: book)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button { navPath.append(book) } label: {
+                            Label("Открыть", systemImage: "book")
+                        }
+                        Button { infoBook = book } label: {
+                            Label("Информация", systemImage: "info.circle")
+                        }
+                        Button { coverPickBook = book } label: {
+                            Label("Сменить обложку", systemImage: "photo")
+                        }
+                        Button {
+                            book.isFavorite.toggle()
+                            try? modelContext.save()
+                        } label: {
+                            Label(
+                                book.isFavorite ? "Убрать из избранного" : "В избранное",
+                                systemImage: book.isFavorite ? "bookmark.slash" : "bookmark"
+                            )
+                        }
+                        Divider()
+                        Button(role: .destructive) {
+                            bookToDelete = book
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Удалить", systemImage: "trash")
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { onToggleUI?() }
+            )
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if showUI {
+                searchBarView
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.08), value: showUI)
+            }
+        }
+    }
+
+    // MARK: - Search bar
+
+    private var searchBarView: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(DS.Color.textSecondary)
+                .font(.system(size: 15))
+
+            TextField("Поиск по названию или автору", text: $searchText)
+                .foregroundStyle(DS.Color.textPrimary)
+                .tint(DS.Color.accent)
+
+            if !searchText.isEmpty {
+                Button { searchText = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(DS.Color.textSecondary)
+                }
+            }
+
+            Button { showFilterSheet = true } label: {
+                Image(systemName: activeFilter == .all
+                    ? "line.3.horizontal.decrease.circle"
+                    : "line.3.horizontal.decrease.circle.fill")
+                    .foregroundStyle(activeFilter == .all ? DS.Color.textSecondary : DS.Color.accent)
+                    .font(.system(size: 18))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(DS.Color.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(DS.Color.background)
+    }
+
+    // MARK: - Empty state
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 48))
+                .foregroundStyle(DS.Color.separator)
+            Text("Библиотека пуста")
+                .font(.system(size: 17))
+                .foregroundStyle(DS.Color.textSecondary)
+            Text("Поделитесь файлом EPUB или FB2 с FlowReader")
+                .font(.system(size: 14))
+                .foregroundStyle(DS.Color.textSecondary.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onTapGesture { onToggleUI?() }
     }
 
     // MARK: - Actions
@@ -137,118 +250,157 @@ struct LibraryView: View {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         return "https://www.google.com/search?tbm=isch&q=\(encoded)"
     }
-
-    // MARK: - Empty state
-
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "books.vertical")
-                .font(.system(size: 56))
-                .foregroundStyle(.secondary)
-            Text("Добавьте первую книгу")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-            Text("Откройте .epub или .fb2 файл\nчерез приложение Файлы")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
 }
 
 // MARK: - BookInfoView
 
-private struct BookInfoView: View {
+struct BookInfoView: View {
     let book: Book
+    var onStartReading: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
-
-    private var fileSize: String {
-        let url = FileStorageService.shared.absoluteBookURL(relativePath: book.filePath)
-        let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
-        return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
-    }
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
-        f.timeStyle = .short
+        f.timeStyle = .none
         return f
     }()
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    infoRow(label: "Название", value: book.title)
-                    infoRow(label: "Автор", value: book.author)
-                    infoRow(label: "Формат", value: book.format.rawValue.uppercased())
-                }
-                Section {
-                    infoRow(label: "Размер", value: fileSize)
-                    infoRow(label: "Добавлена", value: Self.dateFormatter.string(from: book.addedAt))
-                    if let opened = book.lastOpenedAt {
-                        infoRow(label: "Открывалась", value: Self.dateFormatter.string(from: opened))
+            ZStack {
+                DS.Color.background.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        CoverImage(title: book.title, path: book.coverImagePath)
+                            .frame(width: 160)
+                            .shadow(color: .black.opacity(0.4), radius: 16, x: 0, y: 8)
+
+                        VStack(spacing: 4) {
+                            Text(book.title)
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(DS.Color.textPrimary)
+                                .multilineTextAlignment(.center)
+                            Text(book.author.isEmpty ? "Неизвестный автор" : book.author)
+                                .font(.system(size: 15))
+                                .foregroundStyle(DS.Color.textSecondary)
+                        }
+
+                        VStack(spacing: 0) {
+                            infoRow("Формат", book.format.rawValue.uppercased())
+                            Divider().overlay(DS.Color.separator)
+                            infoRow("Добавлена", Self.dateFormatter.string(from: book.addedAt))
+                            if let pageCount = book.pageCount {
+                                Divider().overlay(DS.Color.separator)
+                                infoRow("Страниц", "\(pageCount)")
+                            }
+                            Divider().overlay(DS.Color.separator)
+                            infoRow("Прочитано", "\(Int(book.readingProgress * 100))%")
+                        }
+                        .background(DS.Color.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        Button {
+                            dismiss()
+                            onStartReading?()
+                        } label: {
+                            Text("Продолжить чтение")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(DS.Color.accent)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(DS.Color.accent, lineWidth: 1.5)
+                                }
+                        }
                     }
-                    infoRow(label: "Прочитано", value: "\(Int(book.readingProgress * 100))%")
+                    .padding(20)
                 }
             }
-            .navigationTitle("Информация")
+            .navigationTitle("О книге")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Готово") { dismiss() }
+                        .foregroundStyle(DS.Color.accent)
                 }
             }
         }
     }
 
-    private func infoRow(label: String, value: String) -> some View {
+    private func infoRow(_ label: String, _ value: String) -> some View {
         HStack {
             Text(label)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 15))
+                .foregroundStyle(DS.Color.textSecondary)
             Spacer()
             Text(value)
-                .multilineTextAlignment(.trailing)
+                .font(.system(size: 15))
+                .foregroundStyle(DS.Color.textPrimary)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 
 // MARK: - BookCard
 
-private struct BookCard: View {
+struct BookCard: View {
     let book: Book
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            CoverImage(path: book.coverImagePath)
-                .overlay(alignment: .bottom) {
-                    ProgressBar(value: book.readingProgress)
+        VStack(alignment: .leading, spacing: 6) {
+            CoverImage(title: book.title, path: book.coverImagePath)
+                .shadow(color: .black.opacity(0.5), radius: 8, x: 0, y: 4)
+                .overlay(alignment: .topTrailing) {
+                    if book.isFavorite {
+                        Image(systemName: "bookmark.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(DS.Color.accent)
+                            .padding(6)
+                    }
                 }
 
             Text(book.title)
-                .font(.caption)
-                .fontWeight(.medium)
+                .font(.system(size: 13, weight: .semibold))
                 .lineLimit(2)
-                .foregroundStyle(.primary)
+                .foregroundStyle(DS.Color.textPrimary)
 
-            Text(book.author)
-                .font(.caption2)
+            Text(book.author.isEmpty ? "Неизвестный автор" : book.author)
+                .font(.system(size: 12))
                 .lineLimit(1)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DS.Color.textSecondary)
 
-            if book.readingProgress > 0 {
-                Text("\(Int(book.readingProgress * 100))%")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(DS.Color.surfaceElevated)
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(DS.Color.accent)
+                        .frame(width: geo.size.width * CGFloat(max(0, min(1, book.readingProgress))))
+                }
             }
+            .frame(height: 3)
+
+            HStack(spacing: 0) {
+                Text("\(Int(book.readingProgress * 100))%")
+                if let pages = book.pageCount {
+                    Text(" · \(pages) стр")
+                }
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(DS.Color.textSecondary)
         }
     }
 }
 
 // MARK: - CoverImage
 
-private struct CoverImage: View {
+struct CoverImage: View {
+    let title: String
     let path: String?
 
     var body: some View {
@@ -263,38 +415,35 @@ private struct CoverImage: View {
         }
         .frame(maxWidth: .infinity)
         .aspectRatio(2/3, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
+    @ViewBuilder
     private var placeholderCover: some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(Color(.systemGray5))
-            .overlay {
-                Image(systemName: "book.closed")
-                    .font(.system(size: 28))
-                    .foregroundStyle(.tertiary)
-            }
+        let colors: [Color] = [
+            Color(hex: "2D4A7A"),
+            Color(hex: "5D3A7D"),
+            Color(hex: "7D3A4A"),
+            Color(hex: "2A6B50"),
+            Color(hex: "7D5A2A"),
+            Color(hex: "2A5A7D"),
+        ]
+        let index = abs(title.hashValue) % colors.count
+        LinearGradient(
+            colors: [colors[index], DS.Color.surface],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .overlay {
+            Text(title.prefix(1).uppercased())
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.6))
+        }
     }
 
     private func loadImage(from relativePath: String) -> Image? {
         let url = FileStorageService.shared.absoluteCoverURL(relativePath: relativePath)
         guard let uiImage = UIImage(contentsOfFile: url.path) else { return nil }
         return Image(uiImage: uiImage)
-    }
-}
-
-// MARK: - ProgressBar
-
-private struct ProgressBar: View {
-    let value: Float
-
-    var body: some View {
-        GeometryReader { geo in
-            Rectangle()
-                .fill(Color.accentColor)
-                .frame(width: geo.size.width * CGFloat(value), height: 3)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(height: 3)
     }
 }

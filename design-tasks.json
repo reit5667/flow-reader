@@ -1,0 +1,154 @@
+[
+  {
+    "id": "DTASK-001",
+    "title": "Цветовая система — UI константы",
+    "priority": "high",
+    "status": "pending",
+    "description": "Вынести все цвета UI в единый файл DesignSystem.swift: фоны, текст, акцент, separator, danger",
+    "acceptance_criteria": [
+      "Файл DesignSystem.swift в Core/ с extension Color",
+      "Все цвета: background (#0F0F0F), surface (#1C1C1E), surfaceElevated (#2C2C2E), textPrimary (#FFF), textSecondary (#8E8E93), accent (#C8A96E), separator (#38383A), danger (#FF453A)",
+      "Нигде в коде не используются hardcoded hex — только константы из DesignSystem"
+    ],
+    "files": ["Core/DesignSystem.swift"]
+  },
+  {
+    "id": "DTASK-002",
+    "title": "BookCard — новый дизайн карточки",
+    "priority": "high",
+    "status": "pending",
+    "description": "Переделать BookCard под дизайн-PRD: 2 колонки, обложка 2:3, название+автор+прогресс-бар+страницы под ней",
+    "acceptance_criteria": [
+      "2 колонки, отступы: 16px снаружи, 12px между",
+      "Обложка ratio 2:3, corner radius 8px, тень 0 4px 16px rgba(0,0,0,0.6)",
+      "Под обложкой: название (13pt semibold, белый, max 2 строки), автор (12pt #8E8E93)",
+      "Прогресс-бар: 3px высота, accent color (#C8A96E), radius 1.5px",
+      "Под баром: '15% · 312 стр' в #8E8E93 11pt",
+      "Плейсхолдер обложки: gradient #1C1C1E→#2C2C2E + первая буква названия 32pt"
+    ],
+    "files": ["Features/Library/LibraryView.swift"]
+  },
+  {
+    "id": "DTASK-003",
+    "title": "LibraryView — fullscreen + toggle UI по тапу",
+    "priority": "high",
+    "status": "pending",
+    "description": "Библиотека без постоянных панелей. Тап по пустому месту (не на книгу) — toggle search bar сверху + tab bar снизу. Fade 80ms.",
+    "acceptance_criteria": [
+      "Фон #0F0F0F, никакого NavigationView/NavigationStack сверху",
+      "Тап на пустую область → showUI toggle",
+      "Search bar появляется сверху с fade 80ms (UISearchBar или SwiftUI поверх ZStack)",
+      "Tab bar появляется снизу с fade 80ms",
+      "Повторный тап → скрываются оба",
+      "Тап на книгу не триггерит toggle (только на пустое место)"
+    ],
+    "files": ["Features/Library/LibraryView.swift", "App/ContentView.swift"]
+  },
+  {
+    "id": "DTASK-004",
+    "title": "Tab Bar — кастомный, появляется по вызову",
+    "priority": "high",
+    "status": "pending",
+    "description": "Заменить текущий механизм навигации (SidebarView) на кастомный tab bar снизу: Библиотека / Браузер / Настройки. Появляется только по тапу в библиотеке.",
+    "acceptance_criteria": [
+      "Фон #1C1C1E + UIBlurEffect .dark, высота 83px (49 + 34 safe area)",
+      "Три пункта: books.vertical / globe / gearshape + подписи",
+      "Активный — accent #C8A96E, неактивный — #8E8E93",
+      "Separator сверху 0.5px #38383A",
+      "Переключение между разделами мгновенное (без анимации перехода)",
+      "В ридере tab bar недоступен"
+    ],
+    "files": ["App/ContentView.swift", "Features/Library/LibraryView.swift"]
+  },
+  {
+    "id": "DTASK-005",
+    "title": "Избранное — фильтр и метка на обложке",
+    "priority": "medium",
+    "status": "pending",
+    "description": "Добавить поле isFavorite в модель Book. Контекстное меню: 'В избранное' / 'Убрать из избранного'. Иконка bookmark.fill в углу обложки. Фильтр 'Избранное' в библиотеке.",
+    "acceptance_criteria": [
+      "Book.swift: добавить isFavorite: Bool = false в SwiftData модель",
+      "Контекстное меню: пункт 'В избранное' / 'Убрать из избранного' с toggle",
+      "На обложке избранной книги: bookmark.fill иконка accent color в правом верхнем углу (12pt, padding 6px)",
+      "Фильтр-шит: Все / Читаю (progress > 0 && < 1) / Не начато (progress == 0) / Завершено (progress == 1) / Избранное",
+      "Кнопка фильтра рядом с search bar, иконка line.3.horizontal.decrease.circle"
+    ],
+    "files": ["Core/Models/Book.swift", "Features/Library/LibraryView.swift"]
+  },
+  {
+    "id": "DTASK-006",
+    "title": "ReaderControlsView — редизайн нижнего шита",
+    "priority": "high",
+    "status": "pending",
+    "description": "Переделать controls sheet под дизайн-PRD: drag handle, название+автор, слайдер прогресса, три кнопки (TOC/Bookmark/Settings). Fade вместо slide.",
+    "acceptance_criteria": [
+      "Drag handle 36x4px, #38383A, radius 2px, по центру сверху",
+      "Название книги 17pt semibold + автор 14pt #8E8E93",
+      "Слайдер: accent fill, thumb 20px белый круг с тенью",
+      "Под слайдером: '42%' по центру, #8E8E93 13pt",
+      "Три кнопки равномерно: иконка 22pt + подпись 12pt #8E8E93",
+      "Фон #1C1C1E + blur, corner radius 20px (верхние углы)",
+      "Появление/скрытие: fade 80ms (убрать текущий slide)"
+    ],
+    "files": ["Features/Reader/ReaderControlsView.swift"]
+  },
+  {
+    "id": "DTASK-007",
+    "title": "ReaderSettingsPanel — редизайн панели настроек",
+    "priority": "high",
+    "status": "pending",
+    "description": "Переделать панель настроек ридера под дизайн-PRD: круги тем, горизонтальный скролл шрифтов, кнопки +/- размера, иконки межстрочного и полей.",
+    "acceptance_criteria": [
+      "Темы: 4 круга 44px с тонкой рамкой accent у активного (без текста внутри)",
+      "Шрифты: горизонтальный скролл, названия текстом (Avenir, Georgia, Palatino, Menlo), активный — белый bold, остальные #8E8E93",
+      "Размер шрифта: кнопки [−] [+] с цифрой между ними",
+      "Межстрочный: 3 иконки-пиктограммы (компактный/нормальный/широкий), активная — accent",
+      "Поля: 3 иконки (узкие/средние/широкие), активная — accent",
+      "Все изменения — мгновенно"
+    ],
+    "files": ["Features/Reader/ReaderSettingsPanel.swift"]
+  },
+  {
+    "id": "DTASK-008",
+    "title": "BookInfoView — редизайн экрана 'О книге'",
+    "priority": "medium",
+    "status": "pending",
+    "description": "Переделать BookInfoView под дизайн-PRD: обложка по центру, метаданные списком, две кнопки.",
+    "acceptance_criteria": [
+      "Фон #0F0F0F, навигация ← О книге (стандартный NavigationTitle)",
+      "Обложка: width 160px, 2:3, radius 10px, shadow",
+      "Название 17pt semibold, автор 15pt #8E8E93, оба по центру",
+      "Блок метаданных: Формат / Добавлена / Страниц / Прочитано — разделители #38383A",
+      "Кнопка 'Продолжить чтение': border accent #C8A96E, прозрачный фон, высота 50px, radius 12px",
+      "Кнопка 'Обновить обложку': ghost (текст accent, без border)"
+    ],
+    "files": ["Features/Library/LibraryView.swift"]
+  },
+  {
+    "id": "DTASK-009",
+    "title": "BrowserView — редизайн верхней панели",
+    "priority": "low",
+    "status": "pending",
+    "description": "Переделать верхнюю панель браузера под дизайн-PRD: тонкая 44px панель, truncated URL, progress bar 2px accent.",
+    "acceptance_criteria": [
+      "Панель 44px, фон #1C1C1E, separator снизу 0.5px #38383A",
+      "← back (chevron.left, #FFF), URL в центре (truncated, #8E8E93 14pt), ✕ закрыть",
+      "Progress bar загрузки: 2px линия accent color под панелью, скрывается по завершению",
+      "Toast 'Книга добавлена': фон #1C1C1E, белый текст, radius 12px, снизу, 2.5с"
+    ],
+    "files": ["Features/Browser/BrowserView.swift"]
+  },
+  {
+    "id": "DTASK-010",
+    "title": "SettingsView — тёмная grouped list тема",
+    "priority": "low",
+    "status": "pending",
+    "description": "Привести SettingsView к единому стилю: тёмный фон, стандартный iOS insetGrouped, секции по дизайн-PRD.",
+    "acceptance_criteria": [
+      "listStyle(.insetGrouped) с .scrollContentBackground(.hidden) и фоном #0F0F0F",
+      "Секции: Браузер / Чтение / О приложении",
+      "Accent color применяется к активным переключателям и выбранным элементам"
+    ],
+    "files": ["Features/Settings/SettingsView.swift"]
+  }
+]
