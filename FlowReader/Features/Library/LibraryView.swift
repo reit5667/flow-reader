@@ -26,6 +26,7 @@ struct LibraryView: View {
     @State private var searchText = ""
     @State private var activeFilter: BookFilter = .all
     @State private var showFilterSheet = false
+    @State private var showFileImporter = false
 
     private var filteredBooks: [Book] {
         var result = books
@@ -86,6 +87,16 @@ struct LibraryView: View {
                     Button(filter.rawValue) { activeFilter = filter }
                 }
                 Button("Отмена", role: .cancel) {}
+            }
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: [.item],
+                allowsMultipleSelection: false
+            ) { result in
+                guard case .success(let urls) = result, let url = urls.first else { return }
+                _ = url.startAccessingSecurityScopedResource()
+                defer { url.stopAccessingSecurityScopedResource() }
+                try? ImportService.shared.importBook(from: url, context: modelContext)
             }
         }
     }
@@ -172,6 +183,12 @@ struct LibraryView: View {
                     .foregroundStyle(activeFilter == .all ? DS.Color.textSecondary : DS.Color.accent)
                     .font(.system(size: 18))
             }
+
+            Button { showFileImporter = true } label: {
+                Image(systemName: "plus")
+                    .foregroundStyle(DS.Color.accent)
+                    .font(.system(size: 18))
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -185,21 +202,32 @@ struct LibraryView: View {
     // MARK: - Empty state
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Image(systemName: "books.vertical")
                 .font(.system(size: 48))
                 .foregroundStyle(DS.Color.separator)
             Text("Библиотека пуста")
                 .font(.system(size: 17))
                 .foregroundStyle(DS.Color.textSecondary)
-            Text("Поделитесь файлом EPUB или FB2 с FlowReader")
+            Text("Добавьте файл EPUB или FB2")
                 .font(.system(size: 14))
                 .foregroundStyle(DS.Color.textSecondary.opacity(0.7))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+            Button {
+                showFileImporter = true
+            } label: {
+                Text("Добавить книгу")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(DS.Color.accent)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(DS.Color.accent, lineWidth: 1.5)
+                    }
+            }
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onTapGesture { onToggleUI?() }
     }
 
     // MARK: - Actions
