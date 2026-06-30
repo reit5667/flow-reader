@@ -20,7 +20,7 @@ final class Book {
     var currentOffset: Int
 
     var pageCount: Int?
-    var isFavorite: Bool
+    var isFavorite: Bool?
 
     @Relationship(deleteRule: .cascade) var bookmarks: [Bookmark]
 
@@ -43,7 +43,7 @@ final class Book {
         self.readingProgress = 0
         self.currentOffset = 0
         self.pageCount = pageCount
-        self.isFavorite = false
+        self.isFavorite = nil
         self.bookmarks = []
     }
 }

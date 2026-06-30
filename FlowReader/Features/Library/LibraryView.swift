@@ -40,7 +40,7 @@ struct LibraryView: View {
         case .inProgress: result = result.filter { $0.readingProgress > 0 && $0.readingProgress < 1 }
         case .notStarted: result = result.filter { $0.readingProgress == 0 }
         case .completed:  result = result.filter { $0.readingProgress >= 1 }
-        case .favorites:  result = result.filter { $0.isFavorite }
+        case .favorites:  result = result.filter { $0.isFavorite == true }
         }
         return result
     }
@@ -111,12 +111,12 @@ struct LibraryView: View {
                             Label("Сменить обложку", systemImage: "photo")
                         }
                         Button {
-                            book.isFavorite.toggle()
+                            book.isFavorite = !(book.isFavorite == true)
                             try? modelContext.save()
                         } label: {
                             Label(
-                                book.isFavorite ? "Убрать из избранного" : "В избранное",
-                                systemImage: book.isFavorite ? "bookmark.slash" : "bookmark"
+                                book.isFavorite == true ? "Убрать из избранного" : "В избранное",
+                                systemImage: book.isFavorite == true ? "bookmark.slash" : "bookmark"
                             )
                         }
                         Divider()
@@ -356,7 +356,7 @@ struct BookCard: View {
             CoverImage(title: book.title, path: book.coverImagePath)
                 .shadow(color: .black.opacity(0.5), radius: 8, x: 0, y: 4)
                 .overlay(alignment: .topTrailing) {
-                    if book.isFavorite {
+                    if book.isFavorite == true {
                         Image(systemName: "bookmark.fill")
                             .font(.system(size: 12))
                             .foregroundStyle(DS.Color.accent)
