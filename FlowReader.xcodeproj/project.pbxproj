@@ -17,6 +17,7 @@
 		6711C5812D83D49AF0DBE4AE /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C34C9D57E5AFDD49272E035 /* DesignSystem.swift */; };
 		6FB7F4927A4BB96F88D2B4CB /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8214A3A17EC5E1F7A9CDB6EE /* BookmarksView.swift */; };
 		74280B6A9122E9B57947375F /* ReaderSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A75BA336FDE2BE2D93D2EAA5 /* ReaderSettings.swift */; };
+		802B5339DE49B5F9209B376C /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 41A9F9E736E41403291A68EA /* libz.tbd */; };
 		834BDAF31D4A681E2ADC12C4 /* FileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18263F47D915C2BD2BF8C118 /* FileStorageService.swift */; };
 		8723263786A24F09DA267DC6 /* ReaderControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF80624876559FD3B5CDBF89 /* ReaderControlsView.swift */; };
 		A9A0E633CEB13BD9CEB68BEE /* EPUBParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C48CB5E7755DBBB209C985 /* EPUBParser.swift */; };
@@ -37,11 +38,13 @@
 		03B708865D37C318576E6C48 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		043BCC3159CF5FF12258351B /* BrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserView.swift; sourceTree = "<group>"; };
 		0C34C9D57E5AFDD49272E035 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		15BFB4283CF12606C923D8B5 /* BridgingHeader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BridgingHeader.h; sourceTree = "<group>"; };
 		18263F47D915C2BD2BF8C118 /* FileStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileStorageService.swift; sourceTree = "<group>"; };
 		2255F5F6CDF5581602FB9096 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		2A1994709C4CA31C788F9F8C /* FlowReader.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlowReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A1994709C4CA31C788F9F8C /* FlowReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AD578CA14C43C740C234B3F /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		2D359A825C3D01220BCCA3C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		41A9F9E736E41403291A68EA /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		49F553081DA3C03E8AB367F8 /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		57B0B9519041E91A503196D6 /* FB2Parser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FB2Parser.swift; sourceTree = "<group>"; };
 		819BFABE77A83A9FAA2B5D27 /* TOCView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TOCView.swift; sourceTree = "<group>"; };
@@ -59,6 +62,17 @@
 		EF90BCFA7895322D93302329 /* ReaderSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderSettingsPanel.swift; sourceTree = "<group>"; };
 		FF80624876559FD3B5CDBF89 /* ReaderControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderControlsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1A85990D8D6A5E5A4ED44106 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				802B5339DE49B5F9209B376C /* libz.tbd in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		30BA75DDEAB67C7B807913FB /* Settings */ = {
@@ -107,6 +121,14 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		9115F6EC2F4B10840151B57B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				41A9F9E736E41403291A68EA /* libz.tbd */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		A8BEAAD088516D215142E7C0 /* Features */ = {
 			isa = PBXGroup;
 			children = (
@@ -122,6 +144,7 @@
 			isa = PBXGroup;
 			children = (
 				D3DF1A25CBFBFF43B66F6AC9 /* FlowReader */,
+				9115F6EC2F4B10840151B57B /* Frameworks */,
 				C5BCC32D4BAB75F5E04F7A9C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -137,6 +160,7 @@
 		D3DF1A25CBFBFF43B66F6AC9 /* FlowReader */ = {
 			isa = PBXGroup;
 			children = (
+				15BFB4283CF12606C923D8B5 /* BridgingHeader.h */,
 				64AD0C333F18E004775E6179 /* App */,
 				D532AE5A4742CD028B6C1B4F /* Core */,
 				A8BEAAD088516D215142E7C0 /* Features */,
@@ -197,6 +221,7 @@
 			buildPhases = (
 				EA795E062EC603D33ACC8D1D /* Sources */,
 				70B3AAB285AD437B9630CBF8 /* Resources */,
+				1A85990D8D6A5E5A4ED44106 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -219,7 +244,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					1C31BDED5C83345C3BB7F191 = {
-						DevelopmentTeam = Q4H92B5WW9;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -415,7 +439,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = Q4H92B5WW9;
+				DEVELOPMENT_TEAM = 273XW2F358;
 				INFOPLIST_FILE = FlowReader/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -426,6 +450,7 @@
 				PRODUCT_NAME = FlowReader;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = FlowReader/BridgingHeader.h;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -437,7 +462,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = Q4H92B5WW9;
+				DEVELOPMENT_TEAM = 273XW2F358;
 				INFOPLIST_FILE = FlowReader/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -448,6 +473,7 @@
 				PRODUCT_NAME = FlowReader;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = FlowReader/BridgingHeader.h;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;

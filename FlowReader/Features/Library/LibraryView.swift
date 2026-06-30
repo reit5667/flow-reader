@@ -27,6 +27,7 @@ struct LibraryView: View {
     @State private var activeFilter: BookFilter = .all
     @State private var showFilterSheet = false
     @State private var showFileImporter = false
+    @State private var importErrorMessage: String? = nil
 
     private var filteredBooks: [Book] {
         var result = books
@@ -96,7 +97,19 @@ struct LibraryView: View {
                 guard case .success(let urls) = result, let url = urls.first else { return }
                 _ = url.startAccessingSecurityScopedResource()
                 defer { url.stopAccessingSecurityScopedResource() }
-                try? ImportService.shared.importBook(from: url, context: modelContext)
+                do {
+                    try ImportService.shared.importBook(from: url, context: modelContext)
+                } catch {
+                    importErrorMessage = error.localizedDescription
+                }
+            }
+            .alert("Ошибка импорта", isPresented: Binding(
+                get: { importErrorMessage != nil },
+                set: { if !$0 { importErrorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { importErrorMessage = nil }
+            } message: {
+                Text(importErrorMessage ?? "")
             }
         }
     }
@@ -146,7 +159,7 @@ struct LibraryView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 16)
             .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -405,7 +418,7 @@ struct BookCard: View {
                     .foregroundStyle(DS.Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(minHeight: 42, alignment: .topLeading)
+            .frame(height: 48, alignment: .topLeading)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -444,6 +457,19 @@ struct AddBookCard: View {
             }
             .frame(maxWidth: .infinity)
             .aspectRatio(2/3, contentMode: .fit)
+
+            // Mirror BookCard's text block for equal height
+            VStack(alignment: .leading, spacing: 2) {
+                Text(" ").font(.system(size: 12, weight: .semibold)).lineLimit(2)
+                Text(" ").font(.system(size: 11)).lineLimit(1)
+            }
+            .frame(height: 48, alignment: .topLeading)
+            .hidden()
+
+            Rectangle().fill(Color.clear).frame(height: 3)
+
+            Text(" ").font(.system(size: 11))
+                .hidden()
         }
     }
 }

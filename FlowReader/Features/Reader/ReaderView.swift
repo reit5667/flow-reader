@@ -45,7 +45,7 @@ struct ReaderView: View {
                 onWebViewReady: { wv in webViewRef = wv },
                 onTOCLoaded: { items in tocItems = items },
                 onSelectionChange: { text in
-                    withAnimation(.easeInOut(duration: 0.15)) { selectedText = text }
+                    selectedText = text
                 },
                 onTap: {
                     if selectedText != nil {
@@ -159,7 +159,8 @@ struct ReaderView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(book.title)
         .toolbar(showControls ? .visible : .hidden, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(settings.theme.navBarBackground, for: .navigationBar)
+        .toolbarColorScheme(settings.theme.navBarColorScheme, for: .navigationBar)
         .sheet(isPresented: $showSettings) {
             if let s = settingsQuery.first {
                 ReaderSettingsPanel(settings: s) { showSettings = false }
@@ -196,40 +197,23 @@ struct ReaderView: View {
     }
 
     private func addBookmark() {
-        let js = """
-        (function() {
-            var scrollY = window.scrollY;
-            var totalHeight = Math.max(1, document.body.scrollHeight - window.innerHeight);
-            var elem = document.elementFromPoint(window.innerWidth / 2, window.innerHeight * 0.25);
-            var text = '';
-            if (elem) {
-                text = (elem.innerText || elem.textContent || '').replace(/\\s+/g, ' ').trim();
-                if (!text) {
-                    var p = elem.closest ? elem.closest('p,h1,h2,h3,section') : null;
-                    if (p) text = (p.innerText || p.textContent || '').replace(/\\s+/g, ' ').trim();
-                }
-            }
-            return JSON.stringify({scrollY: scrollY, totalHeight: totalHeight, text: text.substring(0, 100)});
-        })();
-        """
-        let ctx = modelContext
-        let bk = book
-        webViewRef?.evaluateJavaScript(js) { result, _ in
-            guard let json = result as? String,
-                  let data = json.data(using: .utf8),
-                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let scrollY = obj["scrollY"] as? Double,
-                  let totalHeight = obj["totalHeight"] as? Double else { return }
-            let text = (obj["text"] as? String) ?? ""
-            let offset = Int((scrollY / totalHeight) * 100_000)
-            let bookmark = Bookmark(offset: offset, previewText: text.isEmpty ? "Закладка" : text)
-            bookmark.book = bk
-            ctx.insert(bookmark)
-            try? ctx.save()
-            withAnimation(.easeInOut(duration: 0.2)) { self.showBookmarkAdded = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                withAnimation(.easeOut(duration: 0.3)) { self.showBookmarkAdded = false }
-            }
+        let offset = Int(progress * 100_000)
+        let bookmark = Bookmark(offset: offset, previewText: "Закладка")
+        bookmark.book = book
+        modelContext.insert(bookmark)
+        try? modelContext.save()
+        withAnimation(.easeInOut(duration: 0.2)) { showBookmarkAdded = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeOut(duration: 0.3)) { self.showBookmarkAdded = false }
+        }
+        // Fetch preview text async (non-blocking)
+        webViewRef?.evaluateJavaScript("""
+            (function(){var e=document.elementFromPoint(window.innerWidth/2,window.innerHeight*0.3);
+            return e?(e.innerText||e.textContent||'').replace(/\\s+/g,' ').trim().substring(0,100):'';})()
+        """) { result, _ in
+            guard let text = result as? String, !text.isEmpty else { return }
+            bookmark.previewText = text
+            try? self.modelContext.save()
         }
     }
 
@@ -244,13 +228,11 @@ struct ReaderView: View {
 
     private func addBookmarkFromSelection() {
         let offset = Int(progress * 100_000)
-        let text = selectedText ?? ""
-        let ctx = modelContext
-        let bk = book
-        let bookmark = Bookmark(offset: offset, previewText: String(text.prefix(100)))
-        bookmark.book = bk
-        ctx.insert(bookmark)
-        try? ctx.save()
+        let preview = (selectedText ?? "").prefix(100)
+        let bookmark = Bookmark(offset: offset, previewText: preview.isEmpty ? "Закладка" : String(preview))
+        bookmark.book = book
+        modelContext.insert(bookmark)
+        try? modelContext.save()
         withAnimation(.easeInOut(duration: 0.2)) { showBookmarkAdded = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.easeOut(duration: 0.3)) { self.showBookmarkAdded = false }
@@ -450,7 +432,7 @@ struct ReaderWebView: UIViewRepresentable {
             __frSelTimer = setTimeout(function() {
                 var text = window.getSelection().toString().trim();
                 window.webkit.messageHandlers.selectionHandler.postMessage(text);
-            }, 150);
+            }, 300);
         });
         """
 
@@ -479,6 +461,8 @@ struct ReaderWebView: UIViewRepresentable {
     }
 
     private func generateCSS(settings: ReaderSettings) -> String {
+        let selectionBg = settings.theme.isLight ? "rgba(0,100,220,0.25)" : "rgba(255,255,255,0.3)"
+        let selectionFg = settings.theme.isLight ? "#000000" : "#ffffff"
         return """
         * { box-sizing: border-box; }
         html, body {
@@ -489,6 +473,7 @@ struct ReaderWebView: UIViewRepresentable {
             font-family: '\(settings.fontName)', Georgia, serif;
             font-size: \(Int(settings.fontSize))px;
             line-height: \(settings.lineSpacing.cssValue);
+            -webkit-user-select: text;
         }
         body {
             padding: \(settings.margins.cssValue);
@@ -496,6 +481,7 @@ struct ReaderWebView: UIViewRepresentable {
             word-break: break-word;
             overflow-wrap: break-word;
         }
+        ::selection { background-color: \(selectionBg); color: \(selectionFg); }
         p { margin: 0.4em 0; text-indent: 1.5em; }
         h1, h2, h3, h4 { font-weight: bold; margin: 1em 0 0.4em; text-indent: 0; }
         img { max-width: 100%; height: auto; }

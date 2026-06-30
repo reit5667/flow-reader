@@ -35,14 +35,20 @@ final class FB2Parser: NSObject, XMLParserDelegate {
 
     private var inTitleInfo = false
     private var inBookTitle = false
+    private var inAuthor = false
     private var inFirstName = false
     private var inLastName = false
+    private var inNickname = false
+    private var inMiddleName = false
     private var inBody = false
     private var inNote = false
     private var noteId: String?
 
     private var firstNameBuf = ""
     private var lastNameBuf = ""
+    private var nicknameBuf = ""
+    private var middleNameBuf = ""
+    private var authors: [String] = []
     private var currentBinaryId: String?
     private var binaryBuf = ""
 
@@ -111,10 +117,20 @@ final class FB2Parser: NSObject, XMLParserDelegate {
             inTitleInfo = true
         case "book-title" where inTitleInfo:
             inBookTitle = true
-        case "first-name" where inTitleInfo:
+        case "author" where inTitleInfo:
+            inAuthor = true
+            firstNameBuf = ""
+            lastNameBuf = ""
+            nicknameBuf = ""
+            middleNameBuf = ""
+        case "first-name" where inAuthor:
             inFirstName = true
-        case "last-name" where inTitleInfo:
+        case "last-name" where inAuthor:
             inLastName = true
+        case "nickname" where inAuthor:
+            inNickname = true
+        case "middle-name" where inAuthor:
+            inMiddleName = true
         case "coverpage":
             break
         case "image" where elementStack.contains("coverpage"):
@@ -186,6 +202,8 @@ final class FB2Parser: NSObject, XMLParserDelegate {
         if inBookTitle { title += string; return }
         if inFirstName { firstNameBuf += string; return }
         if inLastName { lastNameBuf += string; return }
+        if inNickname { nicknameBuf += string; return }
+        if inMiddleName { middleNameBuf += string; return }
 
         if inBody {
             if inSectionTitle { sectionTitleBuf += string }
@@ -199,11 +217,19 @@ final class FB2Parser: NSObject, XMLParserDelegate {
         _ = elementStack.popLast()
 
         switch tag {
-        case "title-info":
-            inTitleInfo = false
+        case "author" where inTitleInfo:
+            inAuthor = false
             let fn = firstNameBuf.trimmingCharacters(in: .whitespacesAndNewlines)
             let ln = lastNameBuf.trimmingCharacters(in: .whitespacesAndNewlines)
-            author = [fn, ln].filter { !$0.isEmpty }.joined(separator: " ")
+            let nn = nicknameBuf.trimmingCharacters(in: .whitespacesAndNewlines)
+            var name = [fn, ln].filter { !$0.isEmpty }.joined(separator: " ")
+            if name.isEmpty { name = nn }
+            // Normalize all Unicode whitespace (including non-breaking spaces)
+            name = name.components(separatedBy: .whitespaces).filter { !$0.isEmpty }.joined(separator: " ")
+            if !name.isEmpty { authors.append(name) }
+        case "title-info":
+            inTitleInfo = false
+            author = authors.joined(separator: ", ")
         case "book-title":
             inBookTitle = false
             title = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -211,6 +237,10 @@ final class FB2Parser: NSObject, XMLParserDelegate {
             inFirstName = false
         case "last-name":
             inLastName = false
+        case "nickname":
+            inNickname = false
+        case "middle-name":
+            inMiddleName = false
         case "body":
             inBody = false
         case "section":

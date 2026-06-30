@@ -66,7 +66,7 @@ struct ReaderControlsView: View {
                 )
                 Spacer()
                 Button(action: onSettingsTap) {
-                    Image(systemName: "textformat.size")
+                    Image(systemName: "slider.horizontal.3")
                         .frame(width: 44, height: 44)
                 }
                 Spacer()

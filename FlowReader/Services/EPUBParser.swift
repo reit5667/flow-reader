@@ -53,54 +53,112 @@ final class EPUBParser: NSObject {
     // MARK: - ZIP extraction (minimal PKZip reader)
 
     private func extractZIP(data: Data, to destDir: URL) throws {
-        var offset = 0
         let bytes = [UInt8](data)
         let count = bytes.count
 
-        while offset + 30 < count {
-            guard bytes[offset] == 0x50, bytes[offset+1] == 0x4B,
-                  bytes[offset+2] == 0x03, bytes[offset+3] == 0x04 else { break }
+        // Parse Central Directory for correct sizes (handles data descriptors)
+        guard let eocdPos = findEOCD(bytes: bytes, count: count) else { return }
 
-            let compression = UInt16(bytes[offset+8]) | (UInt16(bytes[offset+9]) << 8)
-            let compressedSize = Int(UInt32(bytes[offset+18]) | (UInt32(bytes[offset+19]) << 8)
-                | (UInt32(bytes[offset+20]) << 16) | (UInt32(bytes[offset+21]) << 24))
-            let uncompressedSize = Int(UInt32(bytes[offset+22]) | (UInt32(bytes[offset+23]) << 8)
-                | (UInt32(bytes[offset+24]) << 16) | (UInt32(bytes[offset+25]) << 24))
-            let filenameLen = Int(UInt16(bytes[offset+26]) | (UInt16(bytes[offset+27]) << 8))
-            let extraLen = Int(UInt16(bytes[offset+28]) | (UInt16(bytes[offset+29]) << 8))
+        let cdOffset = int32LE(bytes, eocdPos + 16)
+        let cdCount  = int16LE(bytes, eocdPos + 8)
 
-            let filenameStart = offset + 30
-            let filenameEnd = filenameStart + filenameLen
-            guard filenameEnd <= count else { break }
+        var cdPos = cdOffset
+        for _ in 0..<cdCount {
+            guard cdPos + 46 <= count,
+                  bytes[cdPos] == 0x50, bytes[cdPos+1] == 0x4B,
+                  bytes[cdPos+2] == 0x01, bytes[cdPos+3] == 0x02 else { break }
 
-            let filenameBytes = Array(bytes[filenameStart..<filenameEnd])
-            guard let filename = String(bytes: filenameBytes, encoding: .utf8) else {
-                offset = filenameEnd + extraLen + compressedSize
-                continue
+            let compression      = UInt16(bytes[cdPos+10]) | (UInt16(bytes[cdPos+11]) << 8)
+            let compressedSize   = int32LE(bytes, cdPos + 20)
+            let uncompressedSize = int32LE(bytes, cdPos + 24)
+            let fnLen            = int16LE(bytes, cdPos + 28)
+            let extraLen         = int16LE(bytes, cdPos + 30)
+            let commentLen       = int16LE(bytes, cdPos + 32)
+            let lhOffset         = int32LE(bytes, cdPos + 42)
+
+            let fnStart = cdPos + 46
+            let fnEnd   = fnStart + fnLen
+            guard fnEnd <= count else { break }
+
+            let fnBytes = Array(bytes[fnStart..<fnEnd])
+            let filename = String(bytes: fnBytes, encoding: .utf8)
+                        ?? String(bytes: fnBytes, encoding: .isoLatin1)
+                        ?? ""
+
+            cdPos += 46 + fnLen + extraLen + commentLen
+
+            guard !filename.isEmpty, !filename.hasSuffix("/") else { continue }
+
+            // Seek to local header to find actual data offset
+            guard lhOffset + 30 <= count,
+                  bytes[lhOffset] == 0x50, bytes[lhOffset+1] == 0x4B,
+                  bytes[lhOffset+2] == 0x03, bytes[lhOffset+3] == 0x04 else { continue }
+
+            let lhFnLen    = int16LE(bytes, lhOffset + 26)
+            let lhExtraLen = int16LE(bytes, lhOffset + 28)
+            let dataStart  = lhOffset + 30 + lhFnLen + lhExtraLen
+            let dataEnd    = dataStart + compressedSize
+            guard dataEnd <= count else { continue }
+
+            let fileURL = destDir.appendingPathComponent(filename)
+            try? FileManager.default.createDirectory(
+                at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+            let compressedData = Data(bytes[dataStart..<dataEnd])
+            let fileData: Data
+            if compression == 8 {
+                fileData = try rawInflate(compressedData, outputSize: uncompressedSize)
+            } else {
+                fileData = compressedData
             }
-
-            let dataStart = filenameEnd + extraLen
-            let dataEnd = dataStart + compressedSize
-            guard dataEnd <= count else { break }
-
-            if !filename.hasSuffix("/") {
-                let fileURL = destDir.appendingPathComponent(filename)
-                let parentDir = fileURL.deletingLastPathComponent()
-                try? FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
-
-                let compressedData = Data(bytes[dataStart..<dataEnd])
-                let fileData: Data
-                if compression == 8 {
-                    fileData = try (compressedData as NSData).decompressed(using: .zlib) as Data
-                    _ = uncompressedSize
-                } else {
-                    fileData = compressedData
-                }
-                try fileData.write(to: fileURL)
-            }
-
-            offset = dataEnd
+            try fileData.write(to: fileURL)
         }
+    }
+
+    private func findEOCD(bytes: [UInt8], count: Int) -> Int? {
+        var i = count - 22
+        while i >= 0 {
+            if bytes[i] == 0x50, bytes[i+1] == 0x4B, bytes[i+2] == 0x05, bytes[i+3] == 0x06 { return i }
+            i -= 1
+        }
+        return nil
+    }
+
+    private func int32LE(_ b: [UInt8], _ o: Int) -> Int {
+        Int(UInt32(b[o]) | (UInt32(b[o+1]) << 8) | (UInt32(b[o+2]) << 16) | (UInt32(b[o+3]) << 24))
+    }
+
+    private func int16LE(_ b: [UInt8], _ o: Int) -> Int {
+        Int(UInt16(b[o]) | (UInt16(b[o+1]) << 8))
+    }
+
+    // MARK: - Raw deflate (ZIP method 8, no zlib header/checksum wrapper)
+
+    private func rawInflate(_ compressed: Data, outputSize: Int) throws -> Data {
+        guard !compressed.isEmpty, outputSize > 0 else { return Data() }
+
+        var output = Data(count: outputSize)
+        var status = Int32(Z_DATA_ERROR)
+
+        compressed.withUnsafeBytes { src in
+            guard let srcBase = src.baseAddress else { return }
+            output.withUnsafeMutableBytes { dst in
+                guard let dstBase = dst.baseAddress else { return }
+                var strm = z_stream()
+                strm.next_in  = UnsafeMutablePointer<Bytef>(mutating: srcBase.assumingMemoryBound(to: Bytef.self))
+                strm.avail_in = uInt(compressed.count)
+                strm.next_out = dstBase.assumingMemoryBound(to: Bytef.self)
+                strm.avail_out = uInt(outputSize)
+                guard inflateInit2_(&strm, -15, "1.2.11", Int32(MemoryLayout<z_stream>.size)) == Z_OK else { return }
+                status = inflate(&strm, Z_FINISH)
+                inflateEnd(&strm)
+            }
+        }
+
+        guard status == Z_STREAM_END else {
+            throw EPUBParserError.xmlParseError
+        }
+        return output
     }
 
     // MARK: - OPF location

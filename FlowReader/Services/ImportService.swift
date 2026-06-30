@@ -7,6 +7,7 @@ enum ImportError: LocalizedError {
     case unreadableFile
     case fileCorrupted(String)
     case noBookInArchive
+    case alreadyExists
 
     var errorDescription: String? {
         switch self {
@@ -15,6 +16,7 @@ enum ImportError: LocalizedError {
         case .unreadableFile: return "Не удалось прочитать файл."
         case .fileCorrupted(let detail): return "Файл повреждён: \(detail)"
         case .noBookInArchive: return "В архиве не найдено файлов EPUB или FB2."
+        case .alreadyExists: return "Эта книга уже есть в библиотеке."
         }
     }
 }
@@ -43,6 +45,12 @@ final class ImportService {
         guard fileSize <= maxFileSizeBytes else {
             throw ImportError.fileTooLarge
         }
+
+        let expectedPath = FileStorageService.shared.expectedRelativePath(for: url)
+        let duplicate = try context.fetch(FetchDescriptor<Book>(
+            predicate: #Predicate { $0.filePath == expectedPath }
+        ))
+        if !duplicate.isEmpty { throw ImportError.alreadyExists }
 
         let relativePath = try FileStorageService.shared.saveBook(from: url)
         let savedURL = FileStorageService.shared.absoluteBookURL(relativePath: relativePath)

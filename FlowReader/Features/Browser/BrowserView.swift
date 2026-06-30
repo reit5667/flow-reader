@@ -43,6 +43,7 @@ struct BrowserView: View {
     @State private var toastMessage = ""
     @State private var pendingCoverURL: URL? = nil
     @State private var showCoverConfirm = false
+    @State private var showMirrorHint = false
 
     init(onOpenSidebar: @escaping () -> Void,
          startURL: String = "https://flibusta.is",
@@ -62,9 +63,27 @@ struct BrowserView: View {
                     coverPickMode: coverPickMode,
                     onFileDownloaded: handleDownload,
                     onImportError: showError,
-                    onCoverImageURL: handleCoverImageURL
+                    onCoverImageURL: handleCoverImageURL,
+                    onNavigationFailed: { showMirrorHint = true }
                 )
                 .ignoresSafeArea(edges: .bottom)
+
+                if showMirrorHint {
+                    VStack(spacing: 8) {
+                        Text("Не удалось загрузить страницу")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Text("Попробуйте сменить зеркало в Настройках")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Закрыть") { showMirrorHint = false }
+                            .font(.caption)
+                    }
+                    .padding(16)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.bottom, 16)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
 
                 if showToast {
                     Text(toastMessage)
@@ -167,6 +186,7 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
     let onFileDownloaded: (URL) -> Void
     let onImportError: (String) -> Void
     let onCoverImageURL: (URL) -> Void
+    var onNavigationFailed: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
@@ -174,7 +194,8 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
             coverPickMode: coverPickMode,
             onFileDownloaded: onFileDownloaded,
             onImportError: onImportError,
-            onCoverImageURL: onCoverImageURL
+            onCoverImageURL: onCoverImageURL,
+            onNavigationFailed: onNavigationFailed
         )
     }
 
@@ -197,6 +218,7 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
+        if coverPickMode { webView.allowsLinkPreview = false }
         state.webView = webView
 
         if let url = URL(string: state.addressText) {
@@ -209,6 +231,7 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
         context.coordinator.onFileDownloaded = onFileDownloaded
         context.coordinator.onImportError = onImportError
         context.coordinator.onCoverImageURL = onCoverImageURL
+        context.coordinator.onNavigationFailed = onNavigationFailed
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
@@ -224,10 +247,18 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
         }
     }
 
-    // Long-press on <img> → posts {src} to Swift
+    // Long-press on <img> → posts {src} to Swift; blocks native iOS callout
     private var coverPickJS: String {
         """
         (function() {
+            var style = document.createElement('style');
+            style.textContent = 'img { -webkit-touch-callout: none !important; user-select: none !important; }';
+            (document.head || document.documentElement).appendChild(style);
+
+            document.addEventListener('contextmenu', function(e) {
+                if (e.target.closest('img')) e.preventDefault();
+            }, false);
+
             var timer;
             document.addEventListener('touchstart', function(e) {
                 var img = e.target.closest('img');
@@ -250,17 +281,20 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
         var onFileDownloaded: (URL) -> Void
         var onImportError: (String) -> Void
         var onCoverImageURL: (URL) -> Void
+        var onNavigationFailed: (() -> Void)?
         private var downloadDestination: URL?
 
         init(state: BrowserState, coverPickMode: Bool,
              onFileDownloaded: @escaping (URL) -> Void,
              onImportError: @escaping (String) -> Void,
-             onCoverImageURL: @escaping (URL) -> Void) {
+             onCoverImageURL: @escaping (URL) -> Void,
+             onNavigationFailed: (() -> Void)?) {
             self.state = state
             self.coverPickMode = coverPickMode
             self.onFileDownloaded = onFileDownloaded
             self.onImportError = onImportError
             self.onCoverImageURL = onCoverImageURL
+            self.onNavigationFailed = onNavigationFailed
         }
 
         func handleScriptMessage(_ message: WKScriptMessage) {
@@ -350,7 +384,14 @@ struct BrowserWebViewRepresentable: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            DispatchQueue.main.async { self.state.isLoading = false }
+            DispatchQueue.main.async {
+                self.state.isLoading = false
+                let nsError = error as NSError
+                // Show mirror hint for network errors (not for user-cancelled navigations)
+                if nsError.domain == NSURLErrorDomain && nsError.code != NSURLErrorCancelled {
+                    self.onNavigationFailed?()
+                }
+            }
         }
 
         // MARK: Helpers

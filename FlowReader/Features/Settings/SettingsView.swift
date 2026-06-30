@@ -29,6 +29,24 @@ struct SettingsView: View {
                             .keyboardType(.URL)
                             .foregroundStyle(.secondary)
                     }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Зеркала Flibusta:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(["https://flibusta.is", "https://flibusta.site", "https://flibs.net"], id: \.self) { mirror in
+                                    Button(mirror.replacingOccurrences(of: "https://", with: "")) {
+                                        browserStartURL = mirror
+                                    }
+                                    .font(.caption)
+                                    .buttonStyle(.bordered)
+                                    .tint(browserStartURL == mirror ? .accentColor : .secondary)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
                 }
 
                 if let settings {
@@ -44,6 +62,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            .contentMargins(.bottom, 80, for: .scrollContent)
             .navigationTitle("Настройки")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

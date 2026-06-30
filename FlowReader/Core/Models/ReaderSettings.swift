@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import SwiftUI
 
 enum ReaderTheme: String, Codable, CaseIterable {
     case white
@@ -23,6 +24,16 @@ enum ReaderTheme: String, Codable, CaseIterable {
         case .dark: return "#E5E5EA"
         case .black: return "#FFFFFF"
         }
+    }
+
+    var isLight: Bool { self == .white || self == .sepia }
+
+    var navBarBackground: Color {
+        isLight ? Color(hex: "F2F2F7") : Color(hex: "1C1C1E")
+    }
+
+    var navBarColorScheme: ColorScheme {
+        isLight ? .light : .dark
     }
 }
 

@@ -45,7 +45,13 @@ final class FileStorageService {
     // MARK: - Covers
 
     func saveCover(data: Data, bookId: String) throws -> String {
-        let filename = "\(bookId).jpg"
+        // Remove previous covers for this book so coverImagePath always changes
+        if let existing = try? FileManager.default.contentsOfDirectory(atPath: coversDirectory.path) {
+            for name in existing where name.hasPrefix(bookId) {
+                try? FileManager.default.removeItem(at: coversDirectory.appendingPathComponent(name))
+            }
+        }
+        let filename = "\(bookId)_\(Int(Date().timeIntervalSince1970)).jpg"
         let fileURL = coversDirectory.appendingPathComponent(filename)
         try data.write(to: fileURL, options: .atomic)
         return relativePath(from: fileURL)
@@ -80,6 +86,11 @@ final class FileStorageService {
     private func absoluteURL(from relativePath: String) -> URL {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return documents.appendingPathComponent(relativePath)
+    }
+
+    func expectedRelativePath(for sourceURL: URL) -> String {
+        let filename = sanitizeFilename(sourceURL.lastPathComponent)
+        return relativePath(from: booksDirectory.appendingPathComponent(filename))
     }
 
     private func sanitizeFilename(_ name: String) -> String {

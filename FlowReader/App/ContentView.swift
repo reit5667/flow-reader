@@ -13,6 +13,7 @@ struct ContentView: View {
         @Bindable var appState = appState
 
         mainContent
+            .preferredColorScheme(.dark)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if showUI && !appState.isReading {
                     AppTabBar(activeSection: $activeSection)
