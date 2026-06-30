@@ -68,6 +68,7 @@ final class ReaderSettings {
     var lineSpacing: LineSpacing
     var margins: ReaderMargins
     var orientation: ReaderOrientation
+    var isPageMode: Bool?
 
     init() {
         self.theme = .dark
@@ -76,5 +77,6 @@ final class ReaderSettings {
         self.lineSpacing = .normal
         self.margins = .medium
         self.orientation = .auto
+        self.isPageMode = nil
     }
 }

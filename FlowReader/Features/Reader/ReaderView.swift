@@ -27,11 +27,20 @@ struct ReaderView: View {
         settingsQuery.first ?? ReaderSettings()
     }
 
+    // Value-type snapshot — forces updateUIView when any setting changes.
+    // Without this, SwiftUI sees the same ReaderSettings reference and may skip updateUIView,
+    // leaving coordinator.isOverlayActive stale and CSS never updated.
+    private var cssRevision: String {
+        let s = settings
+        return "\(s.theme.rawValue)-\(Int(s.fontSize))-\(s.fontName)-\(s.lineSpacing.rawValue)-\(s.margins.rawValue)-\(s.isPageMode == true)"
+    }
+
     var body: some View {
         ZStack {
             ReaderWebView(
                 book: book,
                 settings: settings,
+                cssRevision: cssRevision,
                 onProgressChange: { p in progress = p },
                 onWebViewReady: { wv in webViewRef = wv },
                 onTOCLoaded: { items in tocItems = items },
@@ -59,7 +68,7 @@ struct ReaderView: View {
                 onLoadingChanged: { loading in
                     withAnimation(.easeOut(duration: 0.2)) { isLoading = loading }
                 },
-                isOverlayActive: showControls || showSettings
+                isOverlayActive: showControls
             )
             .ignoresSafeArea()
             .onAppear { appState.isReading = true }
@@ -108,8 +117,7 @@ struct ReaderView: View {
                 .allowsHitTesting(false)
             }
 
-            if showControls && !showSettings {
-                // Backdrop: tap on reading area dismisses controls; buttons in controls take SwiftUI priority
+            if showControls {
                 Color.clear
                     .contentShape(Rectangle())
                     .ignoresSafeArea()
@@ -118,8 +126,7 @@ struct ReaderView: View {
                     }
                 ReaderControlsView(
                     book: book,
-                    progress: $progress,
-                    onSeek: { p in seek(to: p) },
+                    progress: progress,
                     onTocTap: {
                         showControls = false
                         showTOC = true
@@ -132,35 +139,35 @@ struct ReaderView: View {
                         showControls = false
                         showBookmarks = true
                     },
-                    onSettingsTap: { showSettings = true }
-                )
-                .transition(.opacity)
-            }
-
-            if showSettings, let s = settingsQuery.first {
-                // Full-screen touch absorber prevents taps from reaching WKWebView
-                ZStack(alignment: .bottom) {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            showSettings = false
-                            showControls = false
-                        }
-                    ReaderSettingsPanel(settings: s) {
-                        showSettings = false
+                    onSettingsTap: {
+                        showControls = false
+                        showSettings = true
                     }
-                }
-                .ignoresSafeArea(edges: .bottom)
+                )
                 .transition(.opacity)
             }
         }
         .background(NavigationBackSwipeEnabler())
-        .onAppear { progress = book.readingProgress }
+        .onAppear {
+            progress = book.readingProgress
+            if settingsQuery.isEmpty {
+                let defaults = ReaderSettings()
+                modelContext.insert(defaults)
+                try? modelContext.save()
+            }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(book.title)
         .toolbar(showControls ? .visible : .hidden, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .sheet(isPresented: $showSettings) {
+            if let s = settingsQuery.first {
+                ReaderSettingsPanel(settings: s) { showSettings = false }
+                    .presentationDetents([.height(440)])
+                    .presentationDragIndicator(.hidden)
+                    .presentationBackground(DS.Color.surface)
+            }
+        }
         .sheet(isPresented: $showTOC) {
             TOCView(items: tocItems, currentProgress: progress) { item in
                 seekToChapter(index: item.index)
@@ -177,12 +184,14 @@ struct ReaderView: View {
 
     private func seek(to progress: Float) {
         guard let webView = webViewRef else { return }
-        // Use UIKit scrollView for reliable programmatic seek;
-        // JS window.scrollTo can be ignored by WKWebView in some states.
         webView.evaluateJavaScript("document.body.scrollHeight - window.innerHeight") { result, _ in
-            guard let total = result as? Double, total > 0 else { return }
+            let total: Double
+            if let n = result as? NSNumber { total = n.doubleValue }
+            else if let d = result as? Double { total = d }
+            else { return }
+            guard total > 0 else { return }
             let y = CGFloat(progress) * CGFloat(total)
-            webView.scrollView.setContentOffset(CGPoint(x: 0, y: y), animated: false)
+            webView.scrollView.setContentOffset(CGPoint(x: 0, y: y), animated: true)
         }
     }
 
@@ -267,6 +276,9 @@ struct ReaderView: View {
 struct ReaderWebView: UIViewRepresentable {
     let book: Book
     let settings: ReaderSettings
+    // Value-type snapshot of settings — SwiftUI diffs this string to detect
+    // setting changes and call updateUIView even though settings is a reference type.
+    var cssRevision: String = ""
     var onProgressChange: ((Float) -> Void)? = nil
     var onWebViewReady: ((WKWebView) -> Void)? = nil
     var onTOCLoaded: (([TOCItem]) -> Void)? = nil
@@ -274,8 +286,7 @@ struct ReaderWebView: UIViewRepresentable {
     var onTap: (() -> Void)? = nil
     var onBrightnessChange: ((CGFloat) -> Void)? = nil
     var onLoadingChanged: ((Bool) -> Void)? = nil
-    // When any overlay (controls, settings) is visible, suppress WKWebView tap
-    // so UIKit gesture doesn't race with SwiftUI button actions.
+    // Suppress WKWebView UIKit tap while controls overlay is visible.
     var isOverlayActive: Bool = false
 
     func makeCoordinator() -> Coordinator {
@@ -332,12 +343,20 @@ struct ReaderWebView: UIViewRepresentable {
         let js = """
         (function() {
             var el = document.getElementById('__fr_style');
+            if (!el) {
+                el = document.createElement('style');
+                el.id = '__fr_style';
+                if (document.head) document.head.appendChild(el);
+            }
             if (el) el.textContent = `\(css)`;
         })();
         """
         webView.evaluateJavaScript(js)
+        let isPageMode = settings.isPageMode == true
+        webView.scrollView.isPagingEnabled = isPageMode
         webView.backgroundColor = UIColor(hex: settings.theme.backgroundColor)
         context.coordinator.isOverlayActive = isOverlayActive
+        context.coordinator.isPageMode = isPageMode
     }
 
     // MARK: - Content loading
@@ -422,8 +441,7 @@ struct ReaderWebView: UIViewRepresentable {
         window.addEventListener('scroll', function() {
             var total = document.body.scrollHeight - window.innerHeight;
             if (total > 0) {
-                var progress = window.scrollY / total;
-                window.webkit.messageHandlers.scrollHandler.postMessage(progress);
+                window.webkit.messageHandlers.scrollHandler.postMessage(window.scrollY / total);
             }
         }, { passive: true });
         var __frSelTimer = null;
@@ -461,7 +479,7 @@ struct ReaderWebView: UIViewRepresentable {
     }
 
     private func generateCSS(settings: ReaderSettings) -> String {
-        """
+        return """
         * { box-sizing: border-box; }
         html, body {
             margin: 0;
@@ -496,6 +514,7 @@ struct ReaderWebView: UIViewRepresentable {
         var onBrightnessChange: ((CGFloat) -> Void)?
         var onLoadingChanged: ((Bool) -> Void)?
         var isOverlayActive = false
+        var isPageMode = false
         weak var brightnessPanGesture: UIPanGestureRecognizer?
         private var brightnessDragStart: CGFloat = 0
         private var saveTimer: Timer?
@@ -537,7 +556,30 @@ struct ReaderWebView: UIViewRepresentable {
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard !isOverlayActive else { return }
+
+            if isPageMode, let view = gesture.view {
+                let x = gesture.location(in: view).x
+                let w = view.bounds.width
+                if x < w * 0.3 {
+                    turnPage(forward: false)
+                } else if x > w * 0.7 {
+                    turnPage(forward: true)
+                } else {
+                    onTap?()
+                }
+                return
+            }
+
             onTap?()
+        }
+
+        private func turnPage(forward: Bool) {
+            guard let sv = webView?.scrollView else { return }
+            let h = sv.bounds.height
+            let y = forward
+                ? min(sv.contentOffset.y + h, max(0, sv.contentSize.height - h))
+                : max(sv.contentOffset.y - h, 0)
+            sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
         }
 
         @objc func handleBrightnessPan(_ gesture: UIPanGestureRecognizer) {

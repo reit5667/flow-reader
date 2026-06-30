@@ -5,7 +5,7 @@ struct ContentView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
 
-    @State private var showUI = false
+    @State private var showUI = true
     @State private var activeSection: AppSection = .library
     @AppStorage("browserStartURL") private var browserStartURL = "https://flibusta.is"
 

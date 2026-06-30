@@ -2,8 +2,7 @@ import SwiftUI
 
 struct ReaderControlsView: View {
     let book: Book
-    @Binding var progress: Float
-    let onSeek: (Float) -> Void
+    let progress: Float
     let onTocTap: () -> Void
     let onBookmarkTap: () -> Void
     let onBookmarkLongPress: () -> Void
@@ -18,7 +17,7 @@ struct ReaderControlsView: View {
     }
 
     private var controlSheet: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(book.title)
                     .font(.subheadline)
@@ -31,12 +30,16 @@ struct ReaderControlsView: View {
             }
 
             HStack(spacing: 10) {
-                Slider(value: $progress, in: 0...1) { editing in
-                    if !editing {
-                        onSeek(progress)
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color(.systemGray4))
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.primary)
+                            .frame(width: geo.size.width * CGFloat(max(0, min(1, progress))))
                     }
                 }
-                .tint(.primary)
+                .frame(height: 4)
 
                 Text("\(Int(progress * 100))%")
                     .font(.caption)

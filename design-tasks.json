@@ -3,20 +3,22 @@
     "id": "DTASK-001",
     "title": "Цветовая система — UI константы",
     "priority": "high",
-    "status": "pending",
+    "status": "done",
     "description": "Вынести все цвета UI в единый файл DesignSystem.swift: фоны, текст, акцент, separator, danger",
     "acceptance_criteria": [
       "Файл DesignSystem.swift в Core/ с extension Color",
       "Все цвета: background (#0F0F0F), surface (#1C1C1E), surfaceElevated (#2C2C2E), textPrimary (#FFF), textSecondary (#8E8E93), accent (#C8A96E), separator (#38383A), danger (#FF453A)",
       "Нигде в коде не используются hardcoded hex — только константы из DesignSystem"
     ],
-    "files": ["Core/DesignSystem.swift"]
+    "files": [
+      "Core/DesignSystem.swift"
+    ]
   },
   {
     "id": "DTASK-002",
     "title": "BookCard — новый дизайн карточки",
     "priority": "high",
-    "status": "pending",
+    "status": "done",
     "description": "Переделать BookCard под дизайн-PRD: 2 колонки, обложка 2:3, название+автор+прогресс-бар+страницы под ней",
     "acceptance_criteria": [
       "2 колонки, отступы: 16px снаружи, 12px между",
@@ -26,13 +28,15 @@
       "Под баром: '15% · 312 стр' в #8E8E93 11pt",
       "Плейсхолдер обложки: gradient #1C1C1E→#2C2C2E + первая буква названия 32pt"
     ],
-    "files": ["Features/Library/LibraryView.swift"]
+    "files": [
+      "Features/Library/LibraryView.swift"
+    ]
   },
   {
     "id": "DTASK-003",
     "title": "LibraryView — fullscreen + toggle UI по тапу",
     "priority": "high",
-    "status": "pending",
+    "status": "done",
     "description": "Библиотека без постоянных панелей. Тап по пустому месту (не на книгу) — toggle search bar сверху + tab bar снизу. Fade 80ms.",
     "acceptance_criteria": [
       "Фон #0F0F0F, никакого NavigationView/NavigationStack сверху",
@@ -42,13 +46,16 @@
       "Повторный тап → скрываются оба",
       "Тап на книгу не триггерит toggle (только на пустое место)"
     ],
-    "files": ["Features/Library/LibraryView.swift", "App/ContentView.swift"]
+    "files": [
+      "Features/Library/LibraryView.swift",
+      "App/ContentView.swift"
+    ]
   },
   {
     "id": "DTASK-004",
     "title": "Tab Bar — кастомный, появляется по вызову",
     "priority": "high",
-    "status": "pending",
+    "status": "done",
     "description": "Заменить текущий механизм навигации (SidebarView) на кастомный tab bar снизу: Библиотека / Браузер / Настройки. Появляется только по тапу в библиотеке.",
     "acceptance_criteria": [
       "Фон #1C1C1E + UIBlurEffect .dark, высота 83px (49 + 34 safe area)",
@@ -58,13 +65,16 @@
       "Переключение между разделами мгновенное (без анимации перехода)",
       "В ридере tab bar недоступен"
     ],
-    "files": ["App/ContentView.swift", "Features/Library/LibraryView.swift"]
+    "files": [
+      "App/ContentView.swift",
+      "Features/Library/LibraryView.swift"
+    ]
   },
   {
     "id": "DTASK-005",
     "title": "Избранное — фильтр и метка на обложке",
     "priority": "medium",
-    "status": "pending",
+    "status": "done",
     "description": "Добавить поле isFavorite в модель Book. Контекстное меню: 'В избранное' / 'Убрать из избранного'. Иконка bookmark.fill в углу обложки. Фильтр 'Избранное' в библиотеке.",
     "acceptance_criteria": [
       "Book.swift: добавить isFavorite: Bool = false в SwiftData модель",
@@ -73,7 +83,10 @@
       "Фильтр-шит: Все / Читаю (progress > 0 && < 1) / Не начато (progress == 0) / Завершено (progress == 1) / Избранное",
       "Кнопка фильтра рядом с search bar, иконка line.3.horizontal.decrease.circle"
     ],
-    "files": ["Core/Models/Book.swift", "Features/Library/LibraryView.swift"]
+    "files": [
+      "Core/Models/Book.swift",
+      "Features/Library/LibraryView.swift"
+    ]
   },
   {
     "id": "DTASK-006",
@@ -90,7 +103,9 @@
       "Фон #1C1C1E + blur, corner radius 20px (верхние углы)",
       "Появление/скрытие: fade 80ms (убрать текущий slide)"
     ],
-    "files": ["Features/Reader/ReaderControlsView.swift"]
+    "files": [
+      "Features/Reader/ReaderControlsView.swift"
+    ]
   },
   {
     "id": "DTASK-007",
@@ -106,7 +121,9 @@
       "Поля: 3 иконки (узкие/средние/широкие), активная — accent",
       "Все изменения — мгновенно"
     ],
-    "files": ["Features/Reader/ReaderSettingsPanel.swift"]
+    "files": [
+      "Features/Reader/ReaderSettingsPanel.swift"
+    ]
   },
   {
     "id": "DTASK-008",
@@ -122,7 +139,9 @@
       "Кнопка 'Продолжить чтение': border accent #C8A96E, прозрачный фон, высота 50px, radius 12px",
       "Кнопка 'Обновить обложку': ghost (текст accent, без border)"
     ],
-    "files": ["Features/Library/LibraryView.swift"]
+    "files": [
+      "Features/Library/LibraryView.swift"
+    ]
   },
   {
     "id": "DTASK-009",
@@ -136,7 +155,9 @@
       "Progress bar загрузки: 2px линия accent color под панелью, скрывается по завершению",
       "Toast 'Книга добавлена': фон #1C1C1E, белый текст, radius 12px, снизу, 2.5с"
     ],
-    "files": ["Features/Browser/BrowserView.swift"]
+    "files": [
+      "Features/Browser/BrowserView.swift"
+    ]
   },
   {
     "id": "DTASK-010",
@@ -149,6 +170,8 @@
       "Секции: Браузер / Чтение / О приложении",
       "Accent color применяется к активным переключателям и выбранным элементам"
     ],
-    "files": ["Features/Settings/SettingsView.swift"]
+    "files": [
+      "Features/Settings/SettingsView.swift"
+    ]
   }
 ]

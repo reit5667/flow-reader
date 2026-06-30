@@ -16,7 +16,7 @@ struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Book.lastOpenedAt, order: .reverse) private var books: [Book]
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
 
     @State private var navPath = NavigationPath()
     @State private var coverPickBook: Book? = nil
@@ -105,7 +105,7 @@ struct LibraryView: View {
 
     private var bookGrid: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
+            LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(filteredBooks) { book in
                     NavigationLink(value: book) {
                         BookCard(book: book)
@@ -139,14 +139,15 @@ struct LibraryView: View {
                         }
                     }
                 }
+
+                // Add book card — always last in grid
+                Button { showFileImporter = true } label: {
+                    AddBookCard()
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
             .padding(.bottom, 16)
-            .background(
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture { onToggleUI?() }
-            )
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if showUI {
@@ -165,7 +166,7 @@ struct LibraryView: View {
                 .foregroundStyle(DS.Color.textSecondary)
                 .font(.system(size: 15))
 
-            TextField("Поиск по названию или автору", text: $searchText)
+            TextField("", text: $searchText, prompt: Text("Поиск").foregroundColor(DS.Color.textSecondary))
                 .foregroundStyle(DS.Color.textPrimary)
                 .tint(DS.Color.accent)
 
@@ -181,13 +182,9 @@ struct LibraryView: View {
                     ? "line.3.horizontal.decrease.circle"
                     : "line.3.horizontal.decrease.circle.fill")
                     .foregroundStyle(activeFilter == .all ? DS.Color.textSecondary : DS.Color.accent)
-                    .font(.system(size: 18))
-            }
-
-            Button { showFileImporter = true } label: {
-                Image(systemName: "plus")
-                    .foregroundStyle(DS.Color.accent)
-                    .font(.system(size: 18))
+                    .font(.system(size: 20))
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
             }
         }
         .padding(.horizontal, 12)
@@ -386,21 +383,29 @@ struct BookCard: View {
                 .overlay(alignment: .topTrailing) {
                     if book.isFavorite == true {
                         Image(systemName: "bookmark.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(DS.Color.accent)
-                            .padding(6)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white)
+                            .padding(4)
+                            .background(DS.Color.accent, in: RoundedRectangle(cornerRadius: 4))
+                            .padding(5)
                     }
                 }
 
-            Text(book.title)
-                .font(.system(size: 13, weight: .semibold))
-                .lineLimit(2)
-                .foregroundStyle(DS.Color.textPrimary)
+            // Fixed-height text block keeps all cards the same height in a row
+            VStack(alignment: .leading, spacing: 2) {
+                Text(book.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(2)
+                    .foregroundStyle(DS.Color.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(book.author.isEmpty ? "Неизвестный автор" : book.author)
-                .font(.system(size: 12))
-                .lineLimit(1)
-                .foregroundStyle(DS.Color.textSecondary)
+                Text(book.author.isEmpty ? "Неизвестный автор" : book.author)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .foregroundStyle(DS.Color.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(minHeight: 42, alignment: .topLeading)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -413,14 +418,32 @@ struct BookCard: View {
             }
             .frame(height: 3)
 
-            HStack(spacing: 0) {
-                Text("\(Int(book.readingProgress * 100))%")
-                if let pages = book.pageCount {
-                    Text(" · \(pages) стр")
+            Text("\(Int(book.readingProgress * 100))%")
+                .font(.system(size: 11))
+                .foregroundStyle(DS.Color.textSecondary)
+        }
+    }
+}
+
+// MARK: - AddBookCard
+
+struct AddBookCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(DS.Color.separator, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                VStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 22, weight: .light))
+                        .foregroundStyle(DS.Color.textSecondary)
+                    Text("Добавить")
+                        .font(.system(size: 11))
+                        .foregroundStyle(DS.Color.textSecondary)
                 }
             }
-            .font(.system(size: 11))
-            .foregroundStyle(DS.Color.textSecondary)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(2/3, contentMode: .fit)
         }
     }
 }

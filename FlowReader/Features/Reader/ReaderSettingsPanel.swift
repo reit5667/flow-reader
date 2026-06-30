@@ -8,125 +8,149 @@ struct ReaderSettingsPanel: View {
     private let fonts = ["Georgia", "SF Pro", "Menlo", "Palatino", "Helvetica Neue"]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Header
-            HStack {
-                Text("Настройки")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                        .font(.title3)
-                }
-            }
-
-            Divider()
-
-            // Theme
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Тема")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 10) {
-                    ForEach(ReaderTheme.allCases, id: \.self) { theme in
-                        ThemeButton(theme: theme, isSelected: settings.theme == theme) {
-                            settings.theme = theme
-                        }
-                    }
-                    Spacer()
-                }
-            }
-
-            // Font size
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Размер шрифта")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 16) {
-                    Button {
-                        settings.fontSize = max(12, settings.fontSize - 1)
-                    } label: {
-                        Text("A")
-                            .font(.system(size: 14))
-                            .frame(width: 36, height: 36)
-                            .background(Color(.systemGray5))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    Text("\(Int(settings.fontSize))pt")
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Header
+                HStack {
+                    Text("Настройки чтения")
                         .font(.subheadline)
-                        .monospacedDigit()
-                        .frame(width: 48, alignment: .center)
-                    Button {
-                        settings.fontSize = min(28, settings.fontSize + 1)
-                    } label: {
-                        Text("A")
-                            .font(.system(size: 20))
-                            .frame(width: 36, height: 36)
-                            .background(Color(.systemGray5))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
+                        .fontWeight(.semibold)
                     Spacer()
+                    Button(action: onClose) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .font(.title3)
+                    }
                 }
-                .foregroundStyle(.primary)
-            }
 
-            // Font family
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Шрифт")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(fonts, id: \.self) { font in
-                            FontButton(fontName: font, isSelected: settings.fontName == font) {
-                                settings.fontName = font
+                Divider()
+
+                // Theme
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Тема")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        ForEach(ReaderTheme.allCases, id: \.self) { theme in
+                            ThemeButton(theme: theme, isSelected: settings.theme == theme) {
+                                settings.theme = theme
+                            }
+                        }
+                        Spacer()
+                    }
+                }
+
+                // Font size
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Размер шрифта")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 16) {
+                        Button {
+                            settings.fontSize = max(12, settings.fontSize - 1)
+                        } label: {
+                            Text("A")
+                                .font(.system(size: 14))
+                                .frame(width: 36, height: 36)
+                                .background(Color(.systemGray5))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        Text("\(Int(settings.fontSize))pt")
+                            .font(.subheadline)
+                            .monospacedDigit()
+                            .frame(width: 48, alignment: .center)
+                        Button {
+                            settings.fontSize = min(28, settings.fontSize + 1)
+                        } label: {
+                            Text("A")
+                                .font(.system(size: 20))
+                                .frame(width: 36, height: 36)
+                                .background(Color(.systemGray5))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        Spacer()
+                    }
+                    .foregroundStyle(.primary)
+                }
+
+                // Font family
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Шрифт")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(fonts, id: \.self) { font in
+                                FontButton(fontName: font, isSelected: settings.fontName == font) {
+                                    settings.fontName = font
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Line spacing
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Межстрочный интервал")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 8) {
-                    ForEach(LineSpacing.allCases, id: \.self) { spacing in
-                        IconToggleButton(
-                            icon: spacingIcon(for: spacing),
-                            isSelected: settings.lineSpacing == spacing
-                        ) {
-                            settings.lineSpacing = spacing
+                // Line spacing
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Межстрочный интервал")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        ForEach(LineSpacing.allCases, id: \.self) { spacing in
+                            IconToggleButton(
+                                icon: spacingIcon(for: spacing),
+                                isSelected: settings.lineSpacing == spacing
+                            ) {
+                                settings.lineSpacing = spacing
+                            }
                         }
+                        Spacer()
                     }
-                    Spacer()
+                }
+
+                // Margins
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Поля")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        ForEach(ReaderMargins.allCases, id: \.self) { margin in
+                            IconToggleButton(
+                                icon: marginIcon(for: margin),
+                                isSelected: settings.margins == margin
+                            ) {
+                                settings.margins = margin
+                            }
+                        }
+                        Spacer()
+                    }
+                }
+
+                // Page mode
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Режим листания")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        IconToggleButton(
+                            icon: "scroll",
+                            isSelected: settings.isPageMode != true
+                        ) {
+                            settings.isPageMode = false
+                        }
+                        IconToggleButton(
+                            icon: "book.pages",
+                            isSelected: settings.isPageMode == true
+                        ) {
+                            settings.isPageMode = true
+                        }
+                        Spacer()
+                    }
                 }
             }
-
-            // Margins
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Поля")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 8) {
-                    ForEach(ReaderMargins.allCases, id: \.self) { margin in
-                        IconToggleButton(
-                            icon: marginIcon(for: margin),
-                            isSelected: settings.margins == margin
-                        ) {
-                            settings.margins = margin
-                        }
-                    }
-                    Spacer()
-                }
-            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 48)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-        .padding(.bottom, 24)
         .background(.regularMaterial)
     }
 
