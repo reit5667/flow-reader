@@ -68,6 +68,9 @@ struct ReaderView: View {
                 onLoadingChanged: { loading in
                     withAnimation(.easeOut(duration: 0.2)) { isLoading = loading }
                 },
+                onFontSizeChange: { size in
+                    settingsQuery.first?.fontSize = size
+                },
                 isOverlayActive: showControls
             )
             .ignoresSafeArea()
@@ -296,6 +299,7 @@ struct ReaderWebView: UIViewRepresentable {
     var onTap: (() -> Void)? = nil
     var onBrightnessChange: ((CGFloat) -> Void)? = nil
     var onLoadingChanged: ((Bool) -> Void)? = nil
+    var onFontSizeChange: ((Float) -> Void)? = nil
     // Suppress WKWebView UIKit tap while controls overlay is visible.
     var isOverlayActive: Bool = false
 
@@ -306,7 +310,8 @@ struct ReaderWebView: UIViewRepresentable {
             onSelectionChange: onSelectionChange,
             onTap: onTap,
             onBrightnessChange: onBrightnessChange,
-            onLoadingChanged: onLoadingChanged
+            onLoadingChanged: onLoadingChanged,
+            onFontSizeChange: onFontSizeChange
         )
     }
 
@@ -357,6 +362,18 @@ struct ReaderWebView: UIViewRepresentable {
         webView.addGestureRecognizer(brightnessPan)
         context.coordinator.brightnessPanGesture = brightnessPan
 
+        // Pinch to change font size — disable default WKWebView pinch zoom first
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
+        let pinchGesture = UIPinchGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handlePinch(_:))
+        )
+        pinchGesture.delegate = context.coordinator
+        webView.addGestureRecognizer(pinchGesture)
+
+        context.coordinator.currentFontSize = settings.fontSize
+        context.coordinator.lastIsPageMode = settings.isPageMode == true
+
         loadContent(into: webView, coordinator: context.coordinator)
         onWebViewReady?(webView)
         return webView
@@ -365,6 +382,9 @@ struct ReaderWebView: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         let css = generateCSS(settings: settings)
         let isPageMode = settings.isPageMode == true
+        let modeChanged = isPageMode != context.coordinator.lastIsPageMode
+        context.coordinator.lastIsPageMode = isPageMode
+        context.coordinator.currentFontSize = settings.fontSize
         let scrollListenerJS = isPageMode ? """
         window.removeEventListener('scroll', window.__frScrollHandler);
         window.__frScrollHandler = function() {
@@ -405,6 +425,36 @@ struct ReaderWebView: UIViewRepresentable {
         webView.tintColor = selectionTintColor(for: settings)
         context.coordinator.isOverlayActive = isOverlayActive
         context.coordinator.isPageMode = isPageMode
+
+        if modeChanged {
+            let savedProgress = context.coordinator.lastKnownProgress
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak webView] in
+                guard let webView = webView else { return }
+                if isPageMode {
+                    webView.evaluateJavaScript("document.body.scrollWidth - window.innerWidth") { result, _ in
+                        let total: Double
+                        if let n = result as? NSNumber { total = n.doubleValue }
+                        else if let d = result as? Double { total = d }
+                        else { return }
+                        guard total > 0 else { return }
+                        let raw = CGFloat(savedProgress) * CGFloat(total)
+                        let pageW = webView.scrollView.bounds.width
+                        let x = pageW > 0 ? round(raw / pageW) * pageW : raw
+                        webView.scrollView.setContentOffset(CGPoint(x: x, y: 0), animated: false)
+                    }
+                } else {
+                    webView.evaluateJavaScript("document.body.scrollHeight - window.innerHeight") { result, _ in
+                        let total: Double
+                        if let n = result as? NSNumber { total = n.doubleValue }
+                        else if let d = result as? Double { total = d }
+                        else { return }
+                        guard total > 0 else { return }
+                        let y = CGFloat(savedProgress) * CGFloat(total)
+                        webView.scrollView.setContentOffset(CGPoint(x: 0, y: y), animated: false)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Content loading
@@ -567,7 +617,7 @@ struct ReaderWebView: UIViewRepresentable {
 
     private func generateCSS(settings: ReaderSettings) -> String {
         let selectionBg = settings.theme.isLight ? "rgba(0, 100, 255, 0.5)" : "rgba(255,255,255,0.45)"
-        let selectionFg = settings.theme.isLight ? "#000000" : "#ffffff"
+        let linkColor = settings.theme.isLight ? "#0055CC" : "#5B9EF4"
         let isPageMode = settings.isPageMode == true
         let m = settings.margins.pixelValue
 
@@ -617,9 +667,9 @@ struct ReaderWebView: UIViewRepresentable {
         ::selection { background-color: \(selectionBg) !important; }
         ::-webkit-selection { background-color: \(selectionBg) !important; }
         p { margin: 0.4em 0; text-indent: 1.5em; }
-        h1, h2, h3, h4 { font-weight: bold; margin: 1em 0 0.4em; text-indent: 0; }
-        img { max-width: 100%; height: auto; display: block; }
-        a { color: inherit; }
+        h1, h2, h3, h4 { font-weight: bold; margin: 1em 0 0.4em; text-indent: 0; text-align: center; }
+        img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
+        a { color: \(linkColor); text-decoration: underline; }
         """
     }
 
@@ -633,9 +683,14 @@ struct ReaderWebView: UIViewRepresentable {
         var onTap: (() -> Void)?
         var onBrightnessChange: ((CGFloat) -> Void)?
         var onLoadingChanged: ((Bool) -> Void)?
+        var onFontSizeChange: ((Float) -> Void)?
         var isOverlayActive = false
         var isPageMode = false
         var isLongPressActive = false
+        var lastKnownProgress: Float = 0
+        var lastIsPageMode: Bool = false
+        var currentFontSize: Float = 18
+        var pinchStartFontSize: Float = 18
         weak var brightnessPanGesture: UIPanGestureRecognizer?
         private var brightnessDragStart: CGFloat = 0
         private var saveTimer: Timer?
@@ -645,13 +700,15 @@ struct ReaderWebView: UIViewRepresentable {
              onSelectionChange: ((String?) -> Void)?,
              onTap: (() -> Void)?,
              onBrightnessChange: ((CGFloat) -> Void)?,
-             onLoadingChanged: ((Bool) -> Void)?) {
+             onLoadingChanged: ((Bool) -> Void)?,
+             onFontSizeChange: ((Float) -> Void)?) {
             self.book = book
             self.onProgressChange = onProgressChange
             self.onSelectionChange = onSelectionChange
             self.onTap = onTap
             self.onBrightnessChange = onBrightnessChange
             self.onLoadingChanged = onLoadingChanged
+            self.onFontSizeChange = onFontSizeChange
         }
 
         // MARK: WKScriptMessageHandler
@@ -666,6 +723,7 @@ struct ReaderWebView: UIViewRepresentable {
             guard message.name == "scrollHandler",
                   let progress = message.body as? Double else { return }
             let p = Float(progress)
+            lastKnownProgress = p
             onProgressChange?(p)
             saveTimer?.invalidate()
             saveTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
@@ -747,6 +805,20 @@ struct ReaderWebView: UIViewRepresentable {
             }
         }
 
+        @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+            switch gesture.state {
+            case .began:
+                pinchStartFontSize = currentFontSize
+            case .changed:
+                let newSize = Float(max(12, min(28, Int((pinchStartFontSize * Float(gesture.scale)).rounded()))))
+                if newSize != currentFontSize {
+                    onFontSizeChange?(newSize)
+                }
+            default:
+                break
+            }
+        }
+
         // MARK: UIGestureRecognizerDelegate
 
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
@@ -770,6 +842,25 @@ struct ReaderWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             DispatchQueue.main.async { self.onLoadingChanged?(false) }
+        }
+
+        func webView(_ webView: WKWebView,
+                     decidePolicyFor navigationAction: WKNavigationAction,
+                     decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            // Allow initial HTML load and in-page anchor navigation
+            guard navigationAction.navigationType == .linkActivated,
+                  let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+            // External http/https links — open in Safari
+            if let scheme = url.scheme, scheme == "http" || scheme == "https" {
+                UIApplication.shared.open(url)
+                decisionHandler(.cancel)
+            } else {
+                // In-page anchors and other schemes — let WebView handle
+                decisionHandler(.allow)
+            }
         }
     }
 }

@@ -198,11 +198,14 @@ final class EPUBParser: NSObject {
             )
         }
 
-        // Read spine HTML content now (before defer cleanup deletes unzipDir)
+        // Read spine HTML content now (before defer cleanup deletes unzipDir).
+        // Images are embedded as base64 data URIs so no baseURL is needed after cleanup.
         let spineItems: [EPUBSpineItem] = result.spineHrefs.compactMap { href in
             let url = epubRoot.appendingPathComponent(href)
             guard let html = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-            return EPUBSpineItem(html: html, baseURL: url.deletingLastPathComponent())
+            let baseDir = url.deletingLastPathComponent()
+            let embeddedHTML = embedImages(in: html, baseDir: baseDir)
+            return EPUBSpineItem(html: embeddedHTML, baseURL: baseDir)
         }
 
         // Parse NCX for TOC
@@ -222,6 +225,52 @@ final class EPUBParser: NSObject {
             spineItems: spineItems,
             tocItems: tocItems
         )
+    }
+
+    // Replace relative img src with base64 data URIs so images survive temp dir cleanup.
+    private func embedImages(in html: String, baseDir: URL) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: "src=[\"']([^\"']+)[\"']",
+            options: .caseInsensitive
+        ) else { return html }
+
+        let nsHtml = html as NSString
+        let matches = regex.matches(in: html, range: NSRange(location: 0, length: nsHtml.length))
+        let mutableResult = NSMutableString(string: html)
+        var lengthDelta = 0
+
+        for match in matches {
+            guard match.numberOfRanges > 1 else { continue }
+            let originalRange = match.range(at: 1)
+            let srcValue = nsHtml.substring(with: originalRange)
+
+            if srcValue.hasPrefix("data:") || srcValue.hasPrefix("http") { continue }
+
+            let cleanSrc = (srcValue.components(separatedBy: "#").first ?? srcValue)
+                .removingPercentEncoding ?? srcValue
+            if cleanSrc.isEmpty { continue }
+
+            let imageURL = baseDir.appendingPathComponent(cleanSrc)
+            guard let imageData = try? Data(contentsOf: imageURL) else { continue }
+
+            let ext = imageURL.pathExtension.lowercased()
+            let mimeType: String
+            switch ext {
+            case "png":  mimeType = "image/png"
+            case "gif":  mimeType = "image/gif"
+            case "svg":  mimeType = "image/svg+xml"
+            case "webp": mimeType = "image/webp"
+            default:     mimeType = "image/jpeg"
+            }
+
+            let dataURI = "data:\(mimeType);base64,\(imageData.base64EncodedString())"
+            let adjustedRange = NSRange(location: originalRange.location + lengthDelta,
+                                        length: originalRange.length)
+            mutableResult.replaceCharacters(in: adjustedRange, with: dataURI)
+            lengthDelta += dataURI.utf16.count - originalRange.length
+        }
+
+        return mutableResult as String
     }
 }
 

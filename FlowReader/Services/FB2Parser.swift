@@ -30,8 +30,9 @@ final class FB2Parser: NSObject, XMLParserDelegate {
     private var html = ""
     private var title = ""
     private var author = ""
-    private var binaries: [String: Data] = [:]
+    private var binaries: [String: (data: Data, mime: String)] = [:]
     private var coverImageId: String?
+    private var currentBinaryMime: String = "image/jpeg"
 
     private var inTitleInfo = false
     private var inBookTitle = false
@@ -71,7 +72,14 @@ final class FB2Parser: NSObject, XMLParserDelegate {
 
         if let error = parseError { throw error }
 
-        let coverData = coverImageId.flatMap { binaries[$0] }
+        // Replace image placeholders with base64 data URIs
+        for (id, entry) in binaries {
+            let placeholder = "__fb2img__\(id)"
+            let dataURI = "data:\(entry.mime);base64,\(entry.data.base64EncodedString())"
+            html = html.replacingOccurrences(of: placeholder, with: dataURI)
+        }
+
+        let coverData = coverImageId.flatMap { binaries[$0]?.data }
 
         let fullHTML = """
         <!DOCTYPE html>
@@ -183,9 +191,16 @@ final class FB2Parser: NSObject, XMLParserDelegate {
             } else {
                 html += "<a href=\"\(escapeHTML(href))\">"
             }
+        case "image" where inBody:
+            let href = attrs["l:href"] ?? attrs["xlink:href"] ?? attrs["href"] ?? ""
+            let imgId = href.hasPrefix("#") ? String(href.dropFirst()) : href
+            if !imgId.isEmpty {
+                html += "<img src=\"__fb2img__\(imgId)\">"
+            }
         case "binary":
             if let id = attrs["id"] {
                 currentBinaryId = id
+                currentBinaryMime = attrs["content-type"] ?? "image/jpeg"
                 binaryBuf = ""
             }
         default:
@@ -292,7 +307,7 @@ final class FB2Parser: NSObject, XMLParserDelegate {
             if let id = currentBinaryId {
                 let cleaned = binaryBuf.components(separatedBy: .whitespacesAndNewlines).joined()
                 if let data = Data(base64Encoded: cleaned) {
-                    binaries[id] = data
+                    binaries[id] = (data: data, mime: currentBinaryMime)
                 }
                 currentBinaryId = nil
                 binaryBuf = ""
