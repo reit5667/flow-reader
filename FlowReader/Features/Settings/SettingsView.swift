@@ -24,7 +24,7 @@ struct SettingsView: View {
                         Image("Wordmark")
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 40)
+                            .frame(height: 72)
                         Spacer()
                     }
                     .listRowBackground(Color.clear)
@@ -78,13 +78,6 @@ struct SettingsView: View {
             .contentMargins(.bottom, 80, for: .scrollContent)
             .navigationTitle("Настройки")
             .tint(DS.Color.accent)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { onOpenSidebar() } label: {
-                        Image(systemName: "line.3.horizontal")
-                    }
-                }
-            }
         }
     }
 

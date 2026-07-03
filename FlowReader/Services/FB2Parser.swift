@@ -151,9 +151,19 @@ final class FB2Parser: NSObject, XMLParserDelegate {
             if sectionDepth == 1 {
                 sectionCounter += 1
                 sectionTitleRecorded = false
-                html += "<section id=\"fr-chapter-\(sectionCounter)\">"
+                if let origId = attrs["id"] {
+                    // Preserve original id for anchor links; add fr-chapter anchor for TOC
+                    html += "<div id=\"fr-chapter-\(sectionCounter)\" style=\"height:0;overflow:hidden\"></div>"
+                    html += "<section id=\"\(escapeHTML(origId))\">"
+                } else {
+                    html += "<section id=\"fr-chapter-\(sectionCounter)\">"
+                }
             } else {
-                html += "<section>"
+                if let origId = attrs["id"] {
+                    html += "<section id=\"\(escapeHTML(origId))\">"
+                } else {
+                    html += "<section>"
+                }
             }
         case "title" where inBody:
             if sectionDepth == 1 && !sectionTitleRecorded {
@@ -187,7 +197,7 @@ final class FB2Parser: NSObject, XMLParserDelegate {
             if noteType == "note" || href.hasPrefix("#") {
                 inNote = true
                 noteId = href.hasPrefix("#") ? String(href.dropFirst()) : href
-                html += "<sup class=\"note-ref\">"
+                html += "<sup class=\"note-ref\"><a href=\"\(escapeHTML(href))\">"
             } else {
                 html += "<a href=\"\(escapeHTML(href))\">"
             }
@@ -297,7 +307,7 @@ final class FB2Parser: NSObject, XMLParserDelegate {
             if inBody { html += "</h3>" }
         case "a":
             if inNote {
-                html += "</sup>"
+                html += "</a></sup>"
                 inNote = false
                 noteId = nil
             } else if inBody {

@@ -96,13 +96,9 @@ struct BrowserView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if coverPickMode {
+                if coverPickMode {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button("Закрыть") { dismiss() }
-                    } else {
-                        Button { onOpenSidebar() } label: {
-                            Image(systemName: "line.3.horizontal")
-                        }
                     }
                 }
                 ToolbarItem(placement: .principal) {

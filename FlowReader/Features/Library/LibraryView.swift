@@ -16,7 +16,7 @@ struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Book.lastOpenedAt, order: .reverse) private var books: [Book]
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     @State private var navPath = NavigationPath()
     @State private var coverPickBook: Book? = nil
@@ -28,6 +28,7 @@ struct LibraryView: View {
     @State private var showFilterSheet = false
     @State private var showFileImporter = false
     @State private var importErrorMessage: String? = nil
+    @State private var showSearch = false
 
     private var filteredBooks: [Book] {
         var result = books
@@ -160,31 +161,56 @@ struct LibraryView: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 100)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
-                Image("Wordmark")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 32)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
-                    .padding(.horizontal, 40)
+                HStack(alignment: .center, spacing: 8) {
+                    Image("Wordmark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 72)
 
-                if showUI {
-                    searchBarView
-                        .transition(.opacity)
-                        .animation(.easeInOut(duration: 0.08), value: showUI)
+                    Spacer()
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) { showSearch.toggle() }
+                        if !showSearch { searchText = "" }
+                    } label: {
+                        Image(systemName: showSearch ? "magnifyingglass.circle.fill" : "magnifyingglass")
+                            .font(.system(size: 20))
+                            .foregroundStyle(showSearch ? DS.Color.accent : DS.Color.textSecondary)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
+                    }
+
+                    Button { showFilterSheet = true } label: {
+                        Image(systemName: activeFilter == .all
+                            ? "line.3.horizontal.decrease.circle"
+                            : "line.3.horizontal.decrease.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(activeFilter == .all ? DS.Color.textSecondary : DS.Color.accent)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+
+                if showSearch {
+                    searchFieldView
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
             .background(DS.Color.background)
         }
     }
 
-    // MARK: - Search bar
+    // MARK: - Search field
 
-    private var searchBarView: some View {
+    private var searchFieldView: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(DS.Color.textSecondary)
@@ -216,8 +242,7 @@ struct LibraryView: View {
         .background(DS.Color.surface)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(DS.Color.background)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Empty state

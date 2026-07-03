@@ -3,6 +3,12 @@ import SwiftData
 import WebKit
 import UIKit
 
+// Holds WKWebView reference in a class so it's accessible from any SwiftUI closure
+// (@State var WKWebView? is inaccessible in onDismiss/onChange captured closures)
+private final class WebViewHolder: ObservableObject {
+    var webView: WKWebView?
+}
+
 struct ReaderView: View {
     let book: Book
 
@@ -10,6 +16,7 @@ struct ReaderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
 
+    @StateObject private var wvHolder = WebViewHolder()
     @State private var isLoading = true
     @State private var showControls = false
     @State private var showSettings = false
@@ -21,7 +28,7 @@ struct ReaderView: View {
     @State private var brightnessHideTask: Task<Void, Never>?
     @State private var progress: Float = 0
     @State private var tocItems: [TOCItem] = []
-    @State private var webViewRef: WKWebView?
+    @State private var pendingChapterIndex: Int? = nil
 
     private var settings: ReaderSettings {
         settingsQuery.first ?? ReaderSettings()
@@ -42,7 +49,7 @@ struct ReaderView: View {
                 settings: settings,
                 cssRevision: cssRevision,
                 onProgressChange: { p in progress = p },
-                onWebViewReady: { wv in webViewRef = wv },
+                onWebViewReady: { wv in wvHolder.webView = wv },
                 onTOCLoaded: { items in tocItems = items },
                 onSelectionChange: { text in
                     selectedText = text
@@ -172,9 +179,16 @@ struct ReaderView: View {
                     .presentationBackground(DS.Color.surface)
             }
         }
-        .sheet(isPresented: $showTOC) {
+        .sheet(isPresented: $showTOC, onDismiss: {
+            print("[TOC] onDismiss fired, pendingChapterIndex=\(String(describing: pendingChapterIndex))")
+            if let index = pendingChapterIndex {
+                seekToChapter(index: index)
+                pendingChapterIndex = nil
+            }
+        }) {
             TOCView(items: tocItems, currentProgress: progress) { item in
-                seekToChapter(index: item.index)
+                print("[TOC] item selected: index=\(item.index) title=\(item.title)")
+                pendingChapterIndex = item.index
             }
         }
         .sheet(isPresented: $showBookmarks) {
@@ -187,7 +201,7 @@ struct ReaderView: View {
     // MARK: - Actions
 
     private func seek(to progress: Float) {
-        guard let webView = webViewRef else { return }
+        guard let webView = wvHolder.webView else { return }
         if settings.isPageMode == true {
             webView.evaluateJavaScript("document.body.scrollWidth - window.innerWidth") { result, _ in
                 let total: Double
@@ -224,7 +238,7 @@ struct ReaderView: View {
             withAnimation(.easeOut(duration: 0.3)) { self.showBookmarkAdded = false }
         }
         // Fetch preview text async (non-blocking)
-        webViewRef?.evaluateJavaScript("""
+        wvHolder.webView?.evaluateJavaScript("""
             (function(){var e=document.elementFromPoint(window.innerWidth/2,window.innerHeight*0.3);
             return e?(e.innerText||e.textContent||'').replace(/\\s+/g,' ').trim().substring(0,100):'';})()
         """) { result, _ in
@@ -239,7 +253,7 @@ struct ReaderView: View {
     }
 
     private func clearSelection() {
-        webViewRef?.evaluateJavaScript("window.getSelection().removeAllRanges();")
+        wvHolder.webView?.evaluateJavaScript("window.getSelection().removeAllRanges();")
         withAnimation(.easeOut(duration: 0.15)) { selectedText = nil }
     }
 
@@ -257,11 +271,14 @@ struct ReaderView: View {
     }
 
     private func seekToChapter(index: Int) {
+        print("[TOC] seekToChapter index=\(index), webViewRef=\(wvHolder.webView != nil ? "set" : "nil")")
+        let isPage = settings.isPageMode == true
         let js: String
-        if settings.isPageMode == true {
+        if isPage {
             js = """
             (function() {
                 var el = document.getElementById('fr-chapter-\(index)');
+                console.log('[TOC] page mode, el=', el ? el.id : 'NOT FOUND');
                 if (el) {
                     el.scrollIntoView({behavior: 'instant', block: 'start'});
                     var pageW = window.innerWidth;
@@ -273,14 +290,18 @@ struct ReaderView: View {
             js = """
             (function() {
                 var el = document.getElementById('fr-chapter-\(index)');
+                console.log('[TOC] scroll mode, el=', el ? el.id : 'NOT FOUND');
                 if (el) {
-                    el.scrollIntoView({block: 'start'});
-                    window.scrollBy(0, -8);
+                    var top = el.getBoundingClientRect().top + window.scrollY;
+                    console.log('[TOC] scrolling to top=', top);
+                    window.scrollTo(0, top);
                 }
             })();
             """
         }
-        webViewRef?.evaluateJavaScript(js)
+        wvHolder.webView?.evaluateJavaScript(js) { _, err in
+            if let err { print("[TOC] JS error: \(err)") }
+        }
     }
 }
 
@@ -383,6 +404,7 @@ struct ReaderWebView: UIViewRepresentable {
         let css = generateCSS(settings: settings)
         let isPageMode = settings.isPageMode == true
         let modeChanged = isPageMode != context.coordinator.lastIsPageMode
+        let fontSizeChanged = settings.fontSize != context.coordinator.currentFontSize
         context.coordinator.lastIsPageMode = isPageMode
         context.coordinator.currentFontSize = settings.fontSize
         let scrollListenerJS = isPageMode ? """
@@ -426,9 +448,10 @@ struct ReaderWebView: UIViewRepresentable {
         context.coordinator.isOverlayActive = isOverlayActive
         context.coordinator.isPageMode = isPageMode
 
-        if modeChanged {
+        if modeChanged || fontSizeChanged {
             let savedProgress = context.coordinator.lastKnownProgress
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak webView] in
+            let delay = modeChanged ? 0.4 : 0.3
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak webView] in
                 guard let webView = webView else { return }
                 if isPageMode {
                     webView.evaluateJavaScript("document.body.scrollWidth - window.innerWidth") { result, _ in
@@ -666,8 +689,8 @@ struct ReaderWebView: UIViewRepresentable {
         \(bodyLayout)
         ::selection { background-color: \(selectionBg) !important; }
         ::-webkit-selection { background-color: \(selectionBg) !important; }
-        p { margin: 0.4em 0; text-indent: 1.5em; }
-        h1, h2, h3, h4 { font-weight: bold; margin: 1em 0 0.4em; text-indent: 0; text-align: center; }
+        p { margin: 0.4em 0; text-indent: 1.5em; text-align: justify; }
+        h1, h2, h3, h4 { font-weight: bold; margin: 1em 0 0.4em; text-indent: 0; text-align: left; }
         img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
         a { color: \(linkColor); text-decoration: underline; }
         """
@@ -847,18 +870,27 @@ struct ReaderWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView,
                      decidePolicyFor navigationAction: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            // Allow initial HTML load and in-page anchor navigation
             guard navigationAction.navigationType == .linkActivated,
                   let url = navigationAction.request.url else {
                 decisionHandler(.allow)
                 return
             }
+            let scheme = url.scheme ?? ""
+            // Fragment links on non-http schemes — scroll to element via JS
+            // (WKWebView can't navigate file:// anchors in loadHTMLString context)
+            if let fragment = url.fragment, scheme != "http", scheme != "https" {
+                decisionHandler(.cancel)
+                let safe = fragment.replacingOccurrences(of: "'", with: "\\'")
+                webView.evaluateJavaScript(
+                    "var el=document.getElementById('\(safe)');if(el){el.scrollIntoView({behavior:'smooth',block:'start'});}"
+                )
+                return
+            }
             // External http/https links — open in Safari
-            if let scheme = url.scheme, scheme == "http" || scheme == "https" {
+            if scheme == "http" || scheme == "https" {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
             } else {
-                // In-page anchors and other schemes — let WebView handle
                 decisionHandler(.allow)
             }
         }
