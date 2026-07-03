@@ -18,6 +18,19 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    HStack {
+                        Spacer()
+                        Image("Wordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 40)
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                }
+
                 Section("Браузер") {
                     HStack {
                         Text("Стартовая страница")
@@ -64,6 +77,7 @@ struct SettingsView: View {
             }
             .contentMargins(.bottom, 80, for: .scrollContent)
             .navigationTitle("Настройки")
+            .tint(DS.Color.accent)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { onOpenSidebar() } label: {

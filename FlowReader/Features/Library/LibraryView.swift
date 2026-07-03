@@ -16,7 +16,7 @@ struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Book.lastOpenedAt, order: .reverse) private var books: [Book]
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
 
     @State private var navPath = NavigationPath()
     @State private var coverPickBook: Book? = nil
@@ -160,14 +160,25 @@ struct LibraryView: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 16)
+            .padding(.vertical, 12)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if showUI {
-                searchBarView
-                    .transition(.opacity)
-                    .animation(.easeInOut(duration: 0.08), value: showUI)
+            VStack(spacing: 0) {
+                Image("Wordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 32)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+                    .padding(.horizontal, 40)
+
+                if showUI {
+                    searchBarView
+                        .transition(.opacity)
+                        .animation(.easeInOut(duration: 0.08), value: showUI)
+                }
             }
+            .background(DS.Color.background)
         }
     }
 
@@ -404,36 +415,38 @@ struct BookCard: View {
                     }
                 }
 
-            // Fixed-height text block keeps all cards the same height in a row
             VStack(alignment: .leading, spacing: 2) {
                 Text(book.title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .lineLimit(2)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
                     .foregroundStyle(DS.Color.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text(book.author.isEmpty ? "Неизвестный автор" : book.author)
                     .font(.system(size: 11))
                     .lineLimit(1)
-                    .foregroundStyle(DS.Color.textSecondary)
+                    .foregroundStyle(DS.Color.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(height: 48, alignment: .topLeading)
+            .frame(height: 36, alignment: .topLeading)
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(DS.Color.surfaceElevated)
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill(DS.Color.accent)
-                        .frame(width: geo.size.width * CGFloat(max(0, min(1, book.readingProgress))))
+            HStack(spacing: 6) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(DS.Color.separator)
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(DS.Color.accent)
+                            .frame(width: geo.size.width * CGFloat(max(0, min(1, book.readingProgress))))
+                    }
                 }
-            }
-            .frame(height: 3)
+                .frame(height: 2)
 
-            Text("\(Int(book.readingProgress * 100))%")
-                .font(.system(size: 11))
-                .foregroundStyle(DS.Color.textSecondary)
+                Text("\(Int(book.readingProgress * 100))%")
+                    .font(.system(size: 11))
+                    .foregroundStyle(DS.Color.textTertiary)
+                    .frame(width: 30, alignment: .trailing)
+            }
         }
     }
 }
@@ -445,31 +458,34 @@ struct AddBookCard: View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(DS.Color.separator, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                VStack(spacing: 6) {
+                    .fill(DS.Color.surface)
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(DS.Color.accent, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                VStack(spacing: 8) {
                     Image(systemName: "plus")
-                        .font(.system(size: 22, weight: .light))
-                        .foregroundStyle(DS.Color.textSecondary)
+                        .font(.system(size: 20, weight: .light))
+                        .foregroundStyle(DS.Color.accent)
                     Text("Добавить")
                         .font(.system(size: 11))
-                        .foregroundStyle(DS.Color.textSecondary)
+                        .foregroundStyle(DS.Color.textTertiary)
                 }
             }
             .frame(maxWidth: .infinity)
             .aspectRatio(2/3, contentMode: .fit)
 
-            // Mirror BookCard's text block for equal height
+            // Mirror BookCard text block for grid alignment
             VStack(alignment: .leading, spacing: 2) {
-                Text(" ").font(.system(size: 12, weight: .semibold)).lineLimit(2)
+                Text(" ").font(.system(size: 13, weight: .semibold)).lineLimit(1)
                 Text(" ").font(.system(size: 11)).lineLimit(1)
             }
-            .frame(height: 48, alignment: .topLeading)
+            .frame(height: 36, alignment: .topLeading)
             .hidden()
 
-            Rectangle().fill(Color.clear).frame(height: 3)
-
-            Text(" ").font(.system(size: 11))
-                .hidden()
+            HStack(spacing: 6) {
+                Rectangle().fill(Color.clear).frame(height: 2)
+                Text(" ").font(.system(size: 11)).frame(width: 30)
+            }
+            .hidden()
         }
     }
 }
@@ -497,24 +513,15 @@ struct CoverImage: View {
 
     @ViewBuilder
     private var placeholderCover: some View {
-        let colors: [Color] = [
-            Color(hex: "2D4A7A"),
-            Color(hex: "5D3A7D"),
-            Color(hex: "7D3A4A"),
-            Color(hex: "2A6B50"),
-            Color(hex: "7D5A2A"),
-            Color(hex: "2A5A7D"),
-        ]
-        let index = abs(title.hashValue) % colors.count
         LinearGradient(
-            colors: [colors[index], DS.Color.surface],
+            colors: [DS.Color.surface, DS.Color.surfaceElevated],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
         .overlay {
             Text(title.prefix(1).uppercased())
-                .font(.system(size: 32, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.6))
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(DS.Color.accent)
         }
     }
 

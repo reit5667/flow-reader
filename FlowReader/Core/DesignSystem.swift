@@ -2,14 +2,16 @@ import SwiftUI
 
 enum DS {
     enum Color {
-        static let background     = SwiftUI.Color(hex: "0F0F0F")
-        static let surface        = SwiftUI.Color(hex: "1C1C1E")
-        static let surfaceElevated = SwiftUI.Color(hex: "2C2C2E")
-        static let textPrimary    = SwiftUI.Color.white
-        static let textSecondary  = SwiftUI.Color(hex: "8E8E93")
-        static let accent         = SwiftUI.Color(hex: "C8A96E")
-        static let separator      = SwiftUI.Color(hex: "38383A")
-        static let danger         = SwiftUI.Color(hex: "FF453A")
+        static let background      = SwiftUI.Color(hex: "0D0D0D")
+        static let surface         = SwiftUI.Color(hex: "1A1A1A")
+        static let surfaceElevated = SwiftUI.Color(hex: "242424")
+        static let accent          = SwiftUI.Color(hex: "C8A96E")
+        static let accentSubtle    = SwiftUI.Color(hex: "C8A96E").opacity(0.12)
+        static let textPrimary     = SwiftUI.Color(hex: "F0F0F0")
+        static let textSecondary   = SwiftUI.Color(hex: "ADADAD")
+        static let textTertiary    = SwiftUI.Color(hex: "6B6B6B")
+        static let separator       = SwiftUI.Color(hex: "2C2C2C")
+        static let danger          = SwiftUI.Color(hex: "FF453A")
     }
 }
 

@@ -151,7 +151,7 @@ struct ReaderSettingsPanel: View {
             .padding(.top, 16)
             .padding(.bottom, 48)
         }
-        .background(.regularMaterial)
+        .background(DS.Color.surface)
     }
 
     private func spacingIcon(for spacing: LineSpacing) -> String {
@@ -186,7 +186,7 @@ struct ThemeButton: View {
                     .frame(width: 44, height: 44)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(isSelected ? Color.accentColor : Color(.systemGray4), lineWidth: isSelected ? 2 : 1)
+                            .strokeBorder(isSelected ? DS.Color.accent : DS.Color.separator, lineWidth: isSelected ? 2 : 1)
                     )
                 Text("A")
                     .font(.system(size: 16, weight: .medium))
@@ -210,13 +210,13 @@ struct FontButton: View {
                 .font(.custom(fontName == "SF Pro" ? ".AppleSystemUIFont" : fontName, size: 15))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.accentColor.opacity(0.15) : Color(.systemGray5))
+                .background(isSelected ? DS.Color.accentSubtle : DS.Color.surfaceElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                        .strokeBorder(isSelected ? DS.Color.accent : Color.clear, lineWidth: 1.5)
                 )
-                .foregroundStyle(isSelected ? Color.accentColor : .primary)
+                .foregroundStyle(isSelected ? DS.Color.accent : DS.Color.textPrimary)
         }
         .buttonStyle(.plain)
     }
@@ -234,13 +234,13 @@ struct IconToggleButton: View {
             Image(systemName: icon)
                 .font(.system(size: 16))
                 .frame(width: 44, height: 36)
-                .background(isSelected ? Color.accentColor.opacity(0.15) : Color(.systemGray5))
+                .background(isSelected ? DS.Color.accentSubtle : DS.Color.surfaceElevated)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                        .strokeBorder(isSelected ? DS.Color.accent : Color.clear, lineWidth: 1.5)
                 )
-                .foregroundStyle(isSelected ? Color.accentColor : .primary)
+                .foregroundStyle(isSelected ? DS.Color.accent : DS.Color.textSecondary)
         }
         .buttonStyle(.plain)
     }

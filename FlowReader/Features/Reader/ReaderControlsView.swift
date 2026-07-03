@@ -18,14 +18,24 @@ struct ReaderControlsView: View {
 
     private var controlSheet: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Drag handle
+            HStack {
+                Spacer()
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(DS.Color.separator)
+                    .frame(width: 36, height: 4)
+                Spacer()
+            }
+            .padding(.bottom, 4)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(book.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.Color.textPrimary)
                     .lineLimit(1)
-                Text(book.author)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(book.author.isEmpty ? "Неизвестный автор" : book.author)
+                    .font(.system(size: 12))
+                    .foregroundStyle(DS.Color.textTertiary)
                     .lineLimit(1)
             }
 
@@ -33,17 +43,17 @@ struct ReaderControlsView: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(Color(.systemGray4))
+                            .fill(DS.Color.separator)
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.primary)
+                            .fill(DS.Color.accent)
                             .frame(width: geo.size.width * CGFloat(max(0, min(1, progress))))
                     }
                 }
-                .frame(height: 4)
+                .frame(height: 3)
 
                 Text("\(Int(progress * 100))%")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(DS.Color.textTertiary)
                     .frame(width: 36, alignment: .trailing)
                     .monospacedDigit()
             }
@@ -52,12 +62,16 @@ struct ReaderControlsView: View {
                 Spacer()
                 Button(action: onTocTap) {
                     Image(systemName: "list.bullet")
+                        .font(.system(size: 20))
                         .frame(width: 44, height: 44)
+                        .foregroundStyle(DS.Color.textSecondary)
                 }
                 Spacer()
                 Button(action: onBookmarkTap) {
                     Image(systemName: "bookmark")
+                        .font(.system(size: 20))
                         .frame(width: 44, height: 44)
+                        .foregroundStyle(DS.Color.textSecondary)
                 }
                 .simultaneousGesture(
                     LongPressGesture(minimumDuration: 0.5).onEnded { _ in
@@ -67,15 +81,16 @@ struct ReaderControlsView: View {
                 Spacer()
                 Button(action: onSettingsTap) {
                     Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 20))
                         .frame(width: 44, height: 44)
+                        .foregroundStyle(DS.Color.textSecondary)
                 }
                 Spacer()
             }
-            .foregroundStyle(.primary)
         }
         .padding(.horizontal, 20)
-        .padding(.top, 16)
+        .padding(.top, 10)
         .padding(.bottom, 8)
-        .background(.regularMaterial)
+        .background(DS.Color.surface)
     }
 }

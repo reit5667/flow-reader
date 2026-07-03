@@ -1,0 +1,196 @@
+{
+  "agent_instructions": {
+    "before_start": [
+      "Прочитай PRD-Design-FlowReader-2026-07-03.md",
+      "Выбери ОДНУ задачу со статусом pending и наивысшим приоритетом",
+      "Проверь что все dependencies имеют статус done"
+    ],
+    "during_work": [
+      "Работай только над выбранной задачей",
+      "Не трогай код, не связанный с текущей задачей",
+      "После изменений запускай xcodebuild для проверки"
+    ],
+    "before_finish": [
+      "Выполни test_steps из задачи",
+      "Меняй status на done ТОЛЬКО после успешного билда",
+      "Запиши summary в progress.md",
+      "НИКОГДА не удалять и не редактировать задачи — только менять status"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "DESIGN-001",
+      "category": "infrastructure",
+      "priority": "critical",
+      "title": "Обновить DS.swift — Design System v2",
+      "description": "Обновить цветовые токены в DesignSystem.swift под новую палитру из Design PRD. Добавить недостающие токены: textTertiary, accentSubtle, separator обновить.",
+      "acceptance_criteria": [
+        "background = #0D0D0D",
+        "surface = #1A1A1A",
+        "surfaceElevated = #242424",
+        "accent = #C8A96E (без изменений)",
+        "accentSubtle = Color(hex: C8A96E).opacity(0.12)",
+        "textPrimary = #F0F0F0",
+        "textSecondary = #ADADAD",
+        "textTertiary = #6B6B6B (новый токен)",
+        "separator = #2C2C2C",
+        "danger = #FF453A (без изменений)",
+        "Билд проходит успешно"
+      ],
+      "test_steps": [
+        "Открыть DesignSystem.swift",
+        "Обновить все значения согласно acceptance criteria",
+        "Запустить xcodebuild — должен пройти без ошибок"
+      ],
+      "dependencies": [],
+      "status": "done"
+    },
+    {
+      "id": "DESIGN-002",
+      "category": "ui",
+      "priority": "high",
+      "title": "LibraryView — переход на 2 колонки",
+      "description": "Изменить сетку с 3 на 2 колонки, увеличить spacing до 12pt горизонтальный и вертикальный. Обновить padding контейнера.",
+      "acceptance_criteria": [
+        "Сетка: 2 колонки, spacing: 12pt",
+        "Горизонтальный padding контейнера: 16pt",
+        "Вертикальный spacing между строками: 12pt",
+        "Карточки заполняют доступную ширину корректно",
+        "AddBookCard последний элемент, совпадает по размеру с BookCard"
+      ],
+      "test_steps": [
+        "Изменить columns в LibraryView.swift",
+        "Скомпилировать",
+        "Визуально проверить на симуляторе что 2 колонки отображаются корректно"
+      ],
+      "dependencies": ["DESIGN-001"],
+      "status": "done"
+    },
+    {
+      "id": "DESIGN-003",
+      "category": "ui",
+      "priority": "high",
+      "title": "BookCard — новый дизайн карточки",
+      "description": "Переработать BookCard: обложка 2:3 radius 8; под ней название (semibold 13pt textPrimary, 1 строка) + автор (11pt textTertiary, 1 строка); прогресс-бар 2px accent; метка прогресса %. Плейсхолдер: gradient surface→surfaceElevated + первая буква 28pt accent.",
+      "acceptance_criteria": [
+        "Обложка aspect ratio 2:3, cornerRadius 8",
+        "Название: .font(.system(size: 13, weight: .semibold)), lineLimit(1), DS.Color.textPrimary",
+        "Автор: .font(.system(size: 11)), lineLimit(1), DS.Color.textTertiary",
+        "Прогресс-бар: высота 2pt, DS.Color.accent, фон DS.Color.separator",
+        "Прогресс % label: 11pt textTertiary, справа от бара",
+        "Плейсхолдер: LinearGradient surface→surfaceElevated, первая буква название 28pt accent по центру",
+        "Карточка без явного фона (прозрачная, фон виден от Library)"
+      ],
+      "test_steps": [
+        "Найти BookCard в LibraryView.swift или отдельном файле",
+        "Переработать компонент",
+        "Проверить с обложкой и без",
+        "Проверить с длинным названием"
+      ],
+      "dependencies": ["DESIGN-001", "DESIGN-002"],
+      "status": "done"
+    },
+    {
+      "id": "DESIGN-004",
+      "category": "ui",
+      "priority": "high",
+      "title": "AddBookCard — обновить под новый стиль",
+      "description": "Переработать AddBookCard: штрихованная рамка accent 1pt, иконка plus accent, текст 'Добавить' textTertiary. Тот же aspect ratio 2:3 что и BookCard.",
+      "acceptance_criteria": [
+        "Aspect ratio 2:3, cornerRadius 8",
+        "Stroke: цвет DS.Color.accent, lineWidth 1, dashPattern [4, 4]",
+        "Иконка: systemName 'plus', font size 20, DS.Color.accent",
+        "Текст 'Добавить': 11pt textTertiary",
+        "Фон: DS.Color.surface"
+      ],
+      "test_steps": [
+        "Обновить AddBookCard",
+        "Убедиться что размер совпадает с BookCard в гриде"
+      ],
+      "dependencies": ["DESIGN-003"],
+      "status": "done"
+    },
+    {
+      "id": "DESIGN-005",
+      "category": "ui",
+      "priority": "high",
+      "title": "SidebarView — новый стиль",
+      "description": "Обновить SidebarView: фон #1A1A1A (DS.Color.surface) без blur, правая граница 1px separator, пункты меню с accent иконкой и accentSubtle фоном для активного, блок последней книги с обложкой.",
+      "acceptance_criteria": [
+        "Фон: DS.Color.surface (без .ultraThinMaterial)",
+        "Правая граница: Rectangle().fill(DS.Color.separator).frame(width: 1) справа",
+        "Пункт меню активный: фон DS.Color.accentSubtle, текст DS.Color.accent, иконка DS.Color.accent",
+        "Пункт меню неактивный: текст DS.Color.textPrimary, иконка DS.Color.textSecondary",
+        "Блок последней книги: фон DS.Color.surfaceElevated, radius 8, обложка 40x56 radius 6",
+        "Safe area снизу корректная"
+      ],
+      "test_steps": [
+        "Открыть SidebarView.swift",
+        "Обновить фон и пункты меню",
+        "Проверить что свайп закрывает сайдбар"
+      ],
+      "dependencies": ["DESIGN-001"],
+      "status": "done"
+    },
+    {
+      "id": "DESIGN-006",
+      "category": "ui",
+      "priority": "medium",
+      "title": "ReaderControlsView — обновить стиль",
+      "description": "Обновить нижнюю панель управления ридером: фон DS.Color.surface, drag handle DS.Color.separator, прогресс % рядом со слайдером, кнопки textSecondary → accent при нажатии.",
+      "acceptance_criteria": [
+        "Фон: DS.Color.surface",
+        "Drag handle: DS.Color.separator",
+        "Слайдер tint: DS.Color.accent",
+        "Текст прогресса: '\(Int(progress * 100))%', 12pt, textTertiary, рядом со слайдером",
+        "Кнопки: иконки DS.Color.textSecondary"
+      ],
+      "test_steps": [
+        "Обновить ReaderControlsView.swift",
+        "Открыть книгу, проверить внешний вид панели"
+      ],
+      "dependencies": ["DESIGN-001"],
+      "status": "done"
+    },
+    {
+      "id": "DESIGN-007",
+      "category": "ui",
+      "priority": "medium",
+      "title": "ReaderSettingsPanel — обновить стиль",
+      "description": "Убрать .regularMaterial, поставить явный DS.Color.surface. Кнопки: фон surfaceElevated, выбранная — border accent + текст accent + фон accentSubtle. Заголовки секций textTertiary.",
+      "acceptance_criteria": [
+        "Фон панели: DS.Color.surface (не .regularMaterial)",
+        "ThemeButton: border accent если выбрана, иначе border separator",
+        "FontButton: фон accentSubtle если выбран, border accent, текст accent; иначе фон surfaceElevated",
+        "IconToggleButton: аналогично FontButton",
+        "Заголовки секций: DS.Color.textTertiary"
+      ],
+      "test_steps": [
+        "Обновить ReaderSettingsPanel.swift",
+        "Открыть книгу → настройки ридера",
+        "Проверить все кнопки выбора"
+      ],
+      "dependencies": ["DESIGN-001"],
+      "status": "done"
+    },
+    {
+      "id": "DESIGN-008",
+      "category": "ui",
+      "priority": "low",
+      "title": "SettingsView — tint и финальная проверка wordmark",
+      "description": "Добавить .tint(DS.Color.accent) к NavigationStack. Проверить что wordmark корректно отображается. Обновить кнопки зеркал — выбранное зеркало accent.",
+      "acceptance_criteria": [
+        "NavigationStack имеет .tint(DS.Color.accent)",
+        "Wordmark видит, не обрезается, выравнивание по центру",
+        "Кнопки зеркал: выбранная .tint(DS.Color.accent), остальные .tint(.secondary)"
+      ],
+      "test_steps": [
+        "Открыть SettingsView.swift",
+        "Добавить tint",
+        "Проверить визуально на симуляторе"
+      ],
+      "dependencies": ["DESIGN-001"],
+      "status": "done"
+    }
+  ]
+}
